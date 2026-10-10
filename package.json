@@ -1,0 +1,10 @@
+{
+  "name": "multi-agent-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "智枢套件（工作台 + 问数前后端 + 知库前后端）一键启动器，零依赖",
+  "scripts": {
+    "start": "node start-all.js",
+    "smoke": "python smoke-test.py"
+  }
+}

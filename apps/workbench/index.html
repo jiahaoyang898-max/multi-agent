@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智枢智能工作台</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- 装饰层（光斑 / 网格 / 圆环） -->
+  <div class="deco" aria-hidden="true">
+    <div class="orb a"></div>
+    <div class="orb b"></div>
+    <div class="grid"></div>
+    <div class="ring"></div>
+  </div>
+
+  <!-- 头部 -->
+  <header class="head">
+    <h1 id="app-title">智枢智能工作台</h1>
+    <p id="app-subtitle">统一入口，连接数据与知识</p>
+  </header>
+
+  <!-- 智能体卡片区（由 js/main.js 依据 js/config.js 渲染） -->
+  <main class="cards" id="cards"></main>
+
+  <!-- 更多按钮 -->
+  <button class="more" id="more-btn" type="button">
+    更多智能体
+    <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+  </button>
+
+  <!-- 分页指示器 -->
+  <div class="dots" id="dots" aria-hidden="true"></div>
+
+  <!-- 轻提示 -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

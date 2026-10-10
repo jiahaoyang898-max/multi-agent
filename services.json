@@ -1,0 +1,82 @@
+{
+  "_说明": "智枢套件服务清单。改这里即可增删服务，无需动 start-all.js。cwd 相对本目录；shell:true 用于 npm/cmd 命令。",
+
+  "openBrowser": "http://127.0.0.1:8080",
+
+  "middleware": [
+    {
+      "name": "kb-middleware",
+      "title": "知库中间件 (Milvus/Mongo/MinIO)",
+      "cwd": "apps/knowledge_base",
+      "command": "docker compose up -d",
+      "optional": true
+    },
+    {
+      "name": "dataagent-middleware",
+      "title": "问数中间件 (MySQL/ES/Qdrant/Embedding)",
+      "cwd": "apps/data-agent/docker-dataagent",
+      "command": "docker compose up -d",
+      "optional": true
+    }
+  ],
+
+  "services": [
+    {
+      "name": "workbench",
+      "title": "智枢工作台",
+      "color": "36",
+      "cwd": "apps/workbench",
+      "command": ["node", "server.js"],
+      "port": 8080,
+      "openBrowser": true
+    },
+    {
+      "name": "dataagent-frontend",
+      "title": "问数前端",
+      "color": "34",
+      "cwd": "apps/data-agent/web",
+      "command": ["npm", "run", "dev"],
+      "port": 5173,
+      "shell": true
+    },
+    {
+      "name": "data-agent",
+      "title": "问数后端",
+      "color": "34",
+      "cwd": "apps/data-agent",
+      "command": ["uv", "run", "python", "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "kb-embedding",
+      "title": "知库·嵌入服务 (BGE-M3)",
+      "color": "32",
+      "cwd": "apps/knowledge_base",
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.embedding_service:app", "--host", "127.0.0.1", "--port", "8002"],
+      "port": 8002,
+      "readyTimeoutMs": 300000,
+      "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
+    },
+    {
+      "name": "kb-query",
+      "title": "知库后端·查询",
+      "color": "32",
+      "cwd": "apps/knowledge_base",
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.query_service:app", "--host", "127.0.0.1", "--port", "8001"],
+      "port": 8001,
+      "readyTimeoutMs": 600000,
+      "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
+    },
+    {
+      "name": "kb-import",
+      "title": "知库后端·导入",
+      "color": "32",
+      "cwd": "apps/knowledge_base",
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.import_service:app", "--host", "127.0.0.1", "--port", "8004"],
+      "port": 8004,
+      "readyTimeoutMs": 300000,
+      "optional": true,
+      "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
+    }
+  ]
+}

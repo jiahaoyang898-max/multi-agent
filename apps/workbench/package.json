@@ -1,0 +1,9 @@
+{
+  "name": "zhishu-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "智枢企业智能工作台首页（纯静态，零依赖）",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

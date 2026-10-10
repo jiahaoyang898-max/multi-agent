@@ -1,0 +1,112 @@
+:root {
+  /* 苹果风 · 极简浅色 + 质感升级 */
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #fbfbfd;
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #a1a1a6;
+  --accent: #5e8bc0;
+  --accent-hover: #4f7cb0;
+  --accent-deep: #4a7aad;
+  --accent-soft: #eaf1f8;
+  --border: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow-input: 0 10px 40px rgba(0, 0, 0, 0.12);
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --maxw: 880px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: block;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 数字一律等宽，强化「数据感」 */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 深色模式：仅覆盖主题色变量，组件样式无需改动 */
+:root.dark {
+  --bg: #0f1419;
+  --surface: #1b232d;
+  --surface-2: #161d26;
+  --text: #e8edf2;
+  --text-secondary: #aab6c4;
+  --text-tertiary: #6b7787;
+  --accent: #6f9fd6;
+  --accent-hover: #84b0e0;
+  --accent-deep: #8fb9e6;
+  --accent-soft: #1e2c3d;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.4);
+  --shadow-input: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+:root.dark {
+  color-scheme: dark;
+}
+body,
+.nav,
+.drawer,
+.composer,
+.bubble,
+.chip,
+.fchip,
+.history-item,
+.result-table th,
+.result-table td,
+.hbar .track,
+.seg,
+.tbtn,
+.kpi {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* 苹果风滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}

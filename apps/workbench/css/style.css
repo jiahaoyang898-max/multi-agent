@@ -1,0 +1,181 @@
+/* =========================================================
+   智枢企业智能工作台 - 样式
+   苹果风浅色极简：玻璃拟态 / 柔和阴影 / 大圆角 / 线性图标
+   ========================================================= */
+
+:root {
+  /* 字体栈：SF Pro → 苹方 → 雅黑 回退 */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "PingFang SC", "Helvetica Neue", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --ink:       #1d1d1f;
+  --ink-soft:  #6e6e73;
+  --ink-faint: #a1a1a6;
+  --line:      rgba(0, 0, 0, 0.06);
+
+  /* 卡片主题色 */
+  --blue-1: #0a84ff;  --blue-2: #5ac8fa;
+  --teal-1: #11b388;  --teal-2: #4fd1b5;
+  --wine-1: #8e2b46;  --wine-2: #b8456a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 700px at 12% -8%, rgba(90, 160, 255, 0.10), transparent 60%),
+    radial-gradient(1000px 620px at 92% 8%,  rgba(17, 179, 136, 0.08), transparent 55%),
+    radial-gradient(900px 700px at 78% 108%, rgba(184, 69, 106, 0.07), transparent 55%),
+    linear-gradient(180deg, #fbfcfe 0%, #eef3f9 55%, #e7eef7 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 72px 24px 64px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ---------- 装饰层（克制） ---------- */
+.deco { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.deco .grid {
+  position: absolute; right: -120px; bottom: -160px; width: 640px; height: 640px;
+  background-image:
+    linear-gradient(rgba(120, 140, 170, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 140, 170, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(circle at 70% 70%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(circle at 70% 70%, #000 0%, transparent 72%);
+}
+.deco .orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.55; }
+.deco .orb.a {
+  width: 360px; height: 360px; right: 4%; bottom: 6%;
+  background: radial-gradient(circle at 30% 30%, rgba(90, 160, 255, 0.35), transparent 70%);
+}
+.deco .orb.b {
+  width: 260px; height: 260px; left: 6%; top: 10%;
+  background: radial-gradient(circle at 40% 40%, rgba(17, 179, 136, 0.22), transparent 70%);
+}
+.deco .ring {
+  position: absolute; right: 7%; bottom: 9%; width: 150px; height: 150px;
+  border: 1px solid rgba(120, 140, 170, 0.18); border-radius: 50%;
+  box-shadow: 0 0 40px rgba(120, 160, 255, 0.12); opacity: 0.6;
+}
+
+/* ---------- 头部 ---------- */
+.head { text-align: center; position: relative; z-index: 1; margin-bottom: 52px; }
+.head h1 { font-size: 52px; font-weight: 600; letter-spacing: 0.5px; line-height: 1.15; }
+.head p  { margin-top: 16px; font-size: 20px; font-weight: 300; color: var(--ink-soft); letter-spacing: 0.3px; }
+
+/* ---------- 卡片区 ---------- */
+.cards {
+  position: relative; z-index: 1;
+  display: flex; gap: 36px; justify-content: center; align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.card {
+  width: 380px; min-height: 480px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.68));
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 30px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 22px 56px -22px rgba(31, 45, 80, 0.26),
+    0 8px 22px -12px rgba(31, 45, 80, 0.14);
+  padding: 36px 34px 38px;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer;
+  transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .35s ease;
+}
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 34px 66px -22px rgba(31, 45, 80, 0.3),
+    0 12px 26px -12px rgba(31, 45, 80, 0.18);
+}
+.card:focus-visible { outline: 3px solid rgba(10, 132, 255, 0.35); outline-offset: 3px; }
+
+/* 图标徽章 */
+.badge {
+  width: 68px; height: 68px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.badge.blue { background: linear-gradient(135deg, var(--blue-1), var(--blue-2)); }
+.badge.teal { background: linear-gradient(135deg, var(--teal-1), var(--teal-2)); }
+.badge.wine { background: linear-gradient(135deg, var(--wine-1), var(--wine-2)); }
+.badge svg { width: 34px; height: 34px; stroke: #fff; fill: none; stroke-width: 1.7;
+             stroke-linecap: round; stroke-linejoin: round; }
+
+.card h2  { margin-top: 24px; font-size: 28px; font-weight: 600; letter-spacing: 0.4px; }
+.card .sub{ margin-top: 9px;  font-size: 15px; font-weight: 400; color: var(--ink-soft); letter-spacing: 0.3px; }
+
+/* 卡内玻璃视窗（图标组合） */
+.viz {
+  margin-top: 26px; width: 100%; flex: 1;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.25));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.viz.blue { background: linear-gradient(180deg, rgba(234, 243, 255, 0.7), rgba(216, 235, 255, 0.4)); }
+.viz.teal { background: linear-gradient(180deg, rgba(230, 250, 245, 0.7), rgba(210, 244, 236, 0.4)); }
+.viz.wine { background: linear-gradient(180deg, rgba(251, 238, 242, 0.7), rgba(246, 221, 228, 0.4)); }
+.viz svg { width: 175px; height: 150px; }
+.viz svg .stroke-blue { stroke: var(--blue-1); }
+.viz svg .stroke-teal { stroke: var(--teal-1); }
+.viz svg .stroke-wine { stroke: var(--wine-1); }
+.viz svg [class^="stroke"] { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.viz svg .fill-blue { fill: rgba(10, 132, 255, 0.10); }
+.viz svg .fill-teal { fill: rgba(17, 179, 136, 0.10); }
+.viz svg .fill-wine { fill: rgba(142, 43, 70, 0.10); }
+
+/* ---------- 更多按钮 ---------- */
+.more {
+  position: relative; z-index: 1; margin-top: 46px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 26px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  color: var(--ink-soft); font-family: var(--font);
+  font-size: 15px; font-weight: 500; letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px -12px rgba(31, 45, 80, 0.3);
+  cursor: pointer; transition: all .25s ease;
+}
+.more:hover { color: var(--ink); box-shadow: 0 10px 24px -12px rgba(31, 45, 80, 0.4); transform: translateY(-1px); }
+.more svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- 分页指示器 ---------- */
+.dots { position: relative; z-index: 1; margin-top: 36px; display: flex; gap: 12px; align-items: center; }
+.dots span { width: 9px; height: 9px; border-radius: 50%; background: rgba(17, 179, 136, 0.28); transition: all .3s ease; }
+.dots span.on {
+  width: 26px; border-radius: 999px;
+  background: linear-gradient(90deg, #11b388, #19c98f);
+  box-shadow: 0 0 12px rgba(17, 179, 136, 0.5);
+}
+
+/* ---------- 轻提示 ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: 40px;
+  transform: translate(-50%, 16px);
+  background: rgba(29, 29, 31, 0.82);
+  color: #fff; font-size: 14px; letter-spacing: 0.3px;
+  padding: 10px 20px; border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0; pointer-events: none;
+  transition: all .3s ease;
+  z-index: 10;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
