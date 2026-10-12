@@ -5,6 +5,7 @@
   "description": "智枢套件（工作台 + 问数前后端 + 知库前后端）一键启动器，零依赖",
   "scripts": {
     "start": "node start-all.js",
+    "login": "node apps/workbench/login/server.js",
     "smoke": "python smoke-test.py"
   }
 }

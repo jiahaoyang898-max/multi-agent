@@ -1,0 +1,1006 @@
+/* =========================================================
+   智枢智能工作台 · 登录 / 注册
+   结构参考「斜切双栏」式登录卡：
+     · 卡片被一条对角线切成两半 —— 一半表单、一半欢迎语
+     · 登录时欢迎面板在右，注册时翻到左（两半整体对调）
+   配色沿用项目既有色板：主蓝 #0a84ff / 浅蓝 #5ac8fa
+   ========================================================= */
+
+/* 让 height:auto 也能参与过渡（Chromium 129+，不支持则直接跳变，不报错） */
+html {
+    interpolate-size: allow-keywords;
+}
+
+/* 把切换进度做成可过渡的自定义属性，拖拽时可实时插值 */
+@property --t {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+}
+
+:root {
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "PingFang SC", "Helvetica Neue", "Microsoft YaHei", "Segoe UI", sans-serif;
+
+    --bg: #f3f8fe;
+    /* 通透的淡蓝渐变底，靠明度与一点点蓝建立空气感，不用任何光晕球 */
+    --page-bg: radial-gradient(1200px 640px at 50% -8%, #ffffff 0%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #f8fbff 0%, #edf4fd 46%, #e2edfa 100%);
+
+    --card: rgba(255, 255, 255, .74);
+    --card-border: rgba(255, 255, 255, .9);
+    --ink: #1d1d1f;
+    --ink-soft: #6e6e73;
+    --ink-faint: #a1a1a6;
+    --line: rgba(29, 58, 110, .16);
+
+    --accent: #0a84ff;
+    --accent-deep: #0a6fe0;
+    --accent-text: #0066cc;
+    --accent-soft: rgba(10, 132, 255, .14);
+
+    /* 斜切面板：一层很淡的蓝，和卡片白底形成柔和的明度差 */
+    --slice: linear-gradient(150deg, rgba(10, 132, 255, .085) 0%, rgba(90, 200, 250, .17) 100%);
+
+    /* 按钮单独一组令牌：白字压在这个蓝上需要 4.5:1，
+       #0a84ff 实测只有 3.65:1，因此压深到 #0a6fe0（实测 4.81:1，通过 WCAG AA） */
+    --btn: #0a6fe0;
+    --btn-hover: #0a5fcc;
+    --btn-ink: #ffffff;
+
+    --danger: #d70015;
+    --warn: #b26a00;
+    --success: #0b7a4b;
+
+    --shadow: 0 28px 64px -32px rgba(29, 58, 110, .34);
+    --ease: cubic-bezier(.32, .72, 0, 1);
+
+    /* 悬浮顶栏占掉的高度（padding 22px×2 + 内容 34px）。
+       窄屏竖排时用它给顶部欢迎语让位，否则会和 logo 叠在一起。 */
+    --topbar-h: 78px;
+}
+
+:root.dark {
+    --bg: #0a0e15;
+    --page-bg: radial-gradient(1200px 640px at 50% -8%, rgba(30, 60, 110, .5) 0%, rgba(30, 60, 110, 0) 62%),
+    linear-gradient(180deg, #0d131c 0%, #0a0e15 100%);
+
+    --card: rgba(22, 29, 40, .72);
+    --card-border: rgba(255, 255, 255, .1);
+    --ink: #f5f5f7;
+    --ink-soft: #98989d;
+    --ink-faint: #6e6e73;
+    --line: rgba(255, 255, 255, .14);
+
+    --accent-text: #6cb2ff;
+    --accent-soft: rgba(10, 132, 255, .2);
+
+    --slice: linear-gradient(150deg, rgba(10, 132, 255, .14) 0%, rgba(90, 200, 250, .1) 100%);
+
+    --danger: #ff6961;
+    --warn: #ffb340;
+    --success: #4ec99b;
+
+    --shadow: 0 30px 70px -34px rgba(0, 0, 0, .85);
+    color-scheme: dark;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--bg);
+    background-image: var(--page-bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color .3s ease, color .3s ease;
+}
+
+.field, .check-text, .hi-desc, .foot, .session-bar, .sheet-sub {
+    overflow-wrap: anywhere;
+}
+
+/* ---------- 顶栏 ---------- */
+/* 悬浮在卡片之上，不参与文档流 —— 这样卡片才能真正铺满整个视口，
+   四周不留任何边距（顶栏那一行原本会占掉 78px，把卡片往下顶）。 */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    color: var(--ink);
+}
+
+.mark {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border-radius: 6px;
+    background: var(--ink);
+    display: grid;
+    place-items: center;
+}
+
+.mark svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: var(--bg);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.brand-name {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .4px;
+}
+
+.theme-toggle {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.theme-toggle svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-toggle .ico-moon {
+    display: none;
+}
+
+:root.dark .theme-toggle .ico-sun {
+    display: none;
+}
+
+:root.dark .theme-toggle .ico-moon {
+    display: block;
+}
+
+/* ---------- 已登录提示条（仅当本机存在有效会话时出现） ---------- */
+/* 同样是悬浮层：不占布局高度，否则会挤压铺满的卡片。 */
+.session-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: fixed;
+    top: 82px;
+    left: 0;
+    right: 0;
+    z-index: 29;
+    margin: 0 30px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+    box-shadow: 0 14px 30px -24px rgba(29, 58, 110, .45);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    min-width: 0;
+}
+
+.session-bar[hidden] {
+    display: none;
+}
+
+.sb-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: var(--success);
+}
+
+.sb-text {
+    min-width: 0;
+}
+
+.sb-text b {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.sb-spacer {
+    flex: 1 1 auto;
+}
+
+.sb-go {
+    color: var(--accent-text);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.sb-go:hover {
+    text-decoration: underline;
+}
+
+.sb-out {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--font);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    transition: color .2s ease;
+}
+
+.sb-out:hover {
+    color: var(--danger);
+}
+
+.sb-out:focus-visible, .sb-go:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ---------- 舞台 ---------- */
+/* 铺满整个视口，零内边距：卡片不再是「浮在页面中间的盒子」，
+   而是与页面严丝合缝地重合。 */
+.stage {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    /* 行至少取内容高度（内容超高时能撑开、不溢出），
+       视口更高时则拉伸到满屏 */
+    grid-template-rows: minmax(min-content, 1fr);
+    place-items: stretch;
+    padding: 0;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+    --t: 0;
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
+    /* 必须显式声明行模板：两块面板都写死在第 1 行。
+       否则网格的「稀疏放置」会因为第二块列序更小而把它挤到第 2 行，
+       表现就是欢迎语不居中、贴在卡片顶部。 */
+    grid-template-rows: minmax(min-content, 1fr);
+    /* 铺满模式下去掉圆角 / 描边 / 投影 —— 这三样正是「卡片感」的来源，
+       留着就永远和页面边角对不齐。 */
+    border-radius: 0;
+    border: 0;
+    background: var(--card);
+    backdrop-filter: blur(26px) saturate(150%);
+    -webkit-backdrop-filter: blur(26px) saturate(150%);
+    overflow: hidden;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: --t .58s var(--ease), height .5s var(--ease), background-color .3s ease;
+}
+
+.card.reg {
+    --t: 1;
+}
+
+.card.dragging {
+    transition: none;
+}
+
+.card input {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* 斜切面板：--t=0 在右（登录），--t=1 翻到左（注册）。上宽下窄。 */
+.slice {
+    position: absolute;
+    inset: 0;
+    background: var(--slice);
+    pointer-events: none;
+    clip-path: polygon(
+            calc(46% - var(--t) * 46%) 0,
+            calc(100% - var(--t) * 46%) 0,
+            calc(100% - var(--t) * 62%) 100%,
+            calc(62% - var(--t) * 62%) 100%
+    );
+}
+
+/* 两块面板 */
+.pane {
+    position: relative;
+    z-index: 1;
+    grid-row: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform .58s var(--ease), opacity .22s ease;
+}
+
+.pane-form {
+    grid-column: 1;
+    padding: 48px 56px;
+    transform: translateX(calc(var(--t) * 85.185%));
+    /* 卡片铺满全屏后，表单栏会跟着变得很宽。
+       这里让表单内容本身居中并限制最大宽度，避免输入框被拉成长条；
+       常规窗口（≤1200px）下表单栏不足 560px，此约束不生效。 */
+    align-items: center;
+}
+
+.pane-hi {
+    grid-column: 2;
+    color: var(--ink);
+    transform: translateX(calc(var(--t) * -117.391%));
+    padding-left: calc(88px - var(--t) * 48px);
+    padding-right: calc(40px + var(--t) * 48px);
+}
+
+/* 两侧都是浅色面，文字任何时刻都压在同色调的底上，
+   所以切换动画不需要任何淡入淡出 —— 直接连动到底。 */
+
+.hi-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -.6px;
+    line-height: 1.25;
+}
+
+.hi-desc {
+    margin: 12px 0 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--ink-soft);
+}
+
+/* ---------- 表单 ---------- */
+.form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 560px;
+    min-width: 0;
+}
+
+.form[hidden] {
+    display: none;
+}
+
+.form-title {
+    margin: 0 0 26px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -.4px;
+}
+
+.field {
+    margin-bottom: 22px;
+    min-width: 0;
+}
+
+.field > label,
+.label-row label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: .2px;
+    transition: color .2s ease;
+}
+
+.label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.field input {
+    width: 100%;
+    padding: 0 0 9px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    outline: none;
+    font-family: var(--font);
+    font-size: 15px;
+    letter-spacing: .2px;
+    color: var(--ink);
+    caret-color: var(--accent);
+    transition: border-color .2s ease;
+}
+
+.field input::placeholder {
+    color: var(--ink-faint);
+}
+
+/* 有内容或聚焦时 —— 标签与下划线转为主题色（对视频里那个细节的还原） */
+.field:focus-within > label,
+.field:focus-within .label-row label,
+.field.has-value > label,
+.field.has-value .label-row label {
+    color: var(--accent-text);
+}
+
+.field:focus-within input,
+.field.has-value input {
+    border-bottom-color: var(--accent);
+}
+
+.field.invalid input {
+    border-bottom-color: var(--danger);
+}
+
+.field.invalid > label,
+.field.invalid .label-row label {
+    color: var(--danger);
+}
+
+.err {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--danger);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .2s var(--ease), margin .2s var(--ease);
+}
+
+.field.invalid .err {
+    max-height: 42px;
+    margin-top: 7px;
+}
+
+/* 密码框：右侧内嵌显隐按钮 */
+.pw-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.pw-wrap input {
+    padding-right: 30px;
+}
+
+.eye {
+    position: absolute;
+    right: 0;
+    bottom: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    color: var(--ink-faint);
+    display: grid;
+    place-items: center;
+    transition: color .2s ease;
+}
+
+.eye:hover {
+    color: var(--ink-soft);
+}
+
+.eye:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.eye svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.eye .eye-off {
+    display: none;
+}
+
+.eye.on .eye-show {
+    display: none;
+}
+
+.eye.on .eye-off {
+    display: block;
+}
+
+/* 密码强度条：空值时不占位 */
+.meter {
+    display: none;
+    gap: 4px;
+    margin-top: 10px;
+}
+
+.field.has-value .meter {
+    display: flex;
+}
+
+.meter i {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--line);
+    transition: background-color .2s ease;
+}
+
+.meter.lv-1 i.on {
+    background: var(--danger);
+}
+
+.meter.lv-2 i.on {
+    background: var(--warn);
+}
+
+.meter.lv-3 i.on, .meter.lv-4 i.on {
+    background: var(--success);
+}
+
+.meter-txt {
+    display: none;
+    margin: 7px 0 0;
+    font-size: 11px;
+    letter-spacing: .2px;
+    color: var(--ink-faint);
+}
+
+.field.has-value .meter-txt {
+    display: block;
+}
+
+.meter-txt.lv-1 {
+    color: var(--danger);
+}
+
+.meter-txt.lv-2 {
+    color: var(--warn);
+}
+
+.meter-txt.lv-3, .meter-txt.lv-4 {
+    color: var(--success);
+}
+
+/* ---------- 勾选 ---------- */
+.check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 2px 0 20px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.check.tight {
+    margin: 0 0 18px;
+}
+
+.check input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.check .box {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    margin-top: 1px;
+    border-radius: 4px;
+    border: 1.5px solid var(--line);
+    display: grid;
+    place-items: center;
+    transition: background-color .18s ease, border-color .18s ease;
+}
+
+:root.dark .check .box {
+    border-color: #48484a;
+}
+
+.check .box svg {
+    width: 9px;
+    height: 9px;
+    fill: none;
+    stroke: var(--card);
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    transform: scale(.6);
+    transition: opacity .16s ease, transform .16s ease;
+}
+
+.check input:checked + .box {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.check input:checked + .box svg {
+    stroke: #fff;
+    opacity: 1;
+    transform: none;
+}
+
+.check input:focus-visible + .box {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.check-text {
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    min-width: 0;
+}
+
+#agreeWrap.invalid .box {
+    border-color: var(--danger);
+}
+
+#agreeWrap.invalid .check-text {
+    color: var(--danger);
+}
+
+/* ---------- 提示 / 按钮 ---------- */
+.alert {
+    display: none;
+    align-items: flex-start;
+    gap: 7px;
+    margin: -6px 0 16px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--danger);
+}
+
+.alert.show {
+    display: flex;
+    animation: fade .26s var(--ease);
+}
+
+.alert.success {
+    color: var(--success);
+}
+
+.alert svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    margin-top: 2px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@keyframes fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.btn {
+    width: 100%;
+    height: 46px;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    background: var(--btn);
+    color: var(--btn-ink);
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color .2s ease, transform .1s var(--ease), opacity .2s ease;
+}
+
+.btn:hover:not(:disabled) {
+    background: var(--btn-hover);
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(.985);
+}
+
+.btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn:focus-visible {
+    outline: 3px solid var(--accent-soft);
+    outline-offset: 3px;
+}
+
+.btn.ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.btn.ghost:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    box-shadow: none;
+}
+
+.spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .4);
+    border-top-color: #fff;
+    animation: spin .7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- 文字链接 ---------- */
+.link {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: var(--font);
+    font-size: 12.5px;
+    color: var(--accent-text);
+    transition: color .2s ease;
+}
+
+.label-row .link {
+    font-size: 11.5px;
+}
+
+.link:hover {
+    color: var(--accent-deep);
+    text-decoration: underline;
+}
+
+.link-inline {
+    color: var(--accent-text);
+    text-decoration: none;
+}
+
+.link-inline:hover {
+    text-decoration: underline;
+}
+
+.foot {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+}
+
+/* ---------- 轻提示 ---------- */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 34px;
+    z-index: 20;
+    transform: translate(-50%, 12px);
+    max-width: min(90vw, 420px);
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: #1d1d1f;
+    color: #fff;
+    font-size: 12.5px;
+    letter-spacing: .3px;
+    line-height: 1.5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .26s ease, transform .26s var(--ease);
+}
+
+:root.dark .toast {
+    background: #f5f5f7;
+    color: #0b0b0c;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* ---------- 重置密码弹窗 ---------- */
+dialog.sheet {
+    width: min(392px, calc(100vw - 40px));
+    margin: auto;
+    padding: 26px 26px 22px;
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(26px) saturate(150%);
+    -webkit-backdrop-filter: blur(26px) saturate(150%);
+    font-family: var(--font);
+}
+
+dialog.sheet::backdrop {
+    background: rgba(14, 26, 48, .34);
+}
+
+dialog.sheet h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.3px;
+}
+
+.sheet-sub {
+    margin: 9px 0 22px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+}
+
+dialog.sheet .field:last-of-type {
+    margin-bottom: 10px;
+}
+
+.sheet-act {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.sheet-act .btn {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* ---------- 窄屏：改为「蓝色斜切顶栏 + 表单」竖排 ---------- */
+@media (max-width: 820px) {
+    .card {
+        display: block;
+        width: 100%;
+        min-height: 0;
+        border-radius: 0;
+    }
+
+    .slice {
+        position: relative;
+        inset: auto;
+        /* 顶部让出悬浮顶栏的高度，欢迎语才不会压到 logo 上 */
+        height: calc(186px + var(--topbar-h));
+        clip-path: polygon(0 0, 100% 0, 100% 78%, 0 100%);
+    }
+
+    .pane {
+        transform: none !important;
+        position: static;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .pane-hi {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: calc(186px + var(--topbar-h));
+        padding: calc(var(--topbar-h) + 40px) 26px 0;
+    }
+
+    .hi-title {
+        font-size: 22px;
+    }
+
+    .hi-desc {
+        font-size: 12px;
+        margin-top: 8px;
+    }
+
+    .pane-form {
+        padding: 30px 26px 38px;
+    }
+
+    .form-title {
+        margin-bottom: 22px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 520px) {
+    :root {
+        --topbar-h: 70px;
+    }
+
+    .topbar {
+        padding: 18px 20px;
+    }
+
+    .session-bar {
+        margin: 0 18px;
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+
+    .pane-form {
+        padding: 26px 20px 34px;
+    }
+
+    .slice {
+        height: calc(168px + var(--topbar-h));
+    }
+
+    .pane-hi {
+        height: calc(168px + var(--topbar-h));
+        padding: calc(var(--topbar-h) + 34px) 22px 0;
+    }
+
+    dialog.sheet {
+        padding: 22px 20px 18px;
+        border-radius: 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}

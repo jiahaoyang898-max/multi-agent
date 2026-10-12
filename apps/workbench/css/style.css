@@ -71,6 +71,38 @@ body {
 .head h1 { font-size: 52px; font-weight: 600; letter-spacing: 0.5px; line-height: 1.15; }
 .head p  { margin-top: 16px; font-size: 20px; font-weight: 300; color: var(--ink-soft); letter-spacing: 0.3px; }
 
+/* ---------- 退出登录 ---------- */
+.logout {
+    position: fixed;
+    top: 18px;
+    right: 22px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border: 1px solid var(--line, #d9e2f1);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink-soft, #5b6b85);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.logout:hover {
+    color: #d64541;
+    border-color: #eec4c1;
+    box-shadow: 0 6px 18px -10px rgba(214, 69, 65, .5);
+}
+
+.logout svg {
+    flex: 0 0 auto;
+}
+
 /* ---------- 卡片区 ---------- */
 .cards {
   position: relative; z-index: 1;

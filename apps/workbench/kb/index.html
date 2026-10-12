@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+    <!-- 登录守卫：必须最先加载（同步脚本），未登录在渲染前跳回登录页 -->
+    <script src="../js/auth-guard.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>智枢知库 · 知识问答与文档导入</title>
 <style>
@@ -161,6 +163,74 @@
   /* overflow-wrap:anywhere 会同时作用于「固有尺寸」计算，
      长串英文/URL 不再把父级 min-content 顶宽（这正是横向撑破的元凶） */
   .answer-text{word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap}
+
+  /* 轻量 Markdown 元素 */
+  .answer-text p {
+      margin: 0 0 8px
+  }
+
+  .answer-text p:last-child {
+      margin-bottom: 0
+  }
+
+  .answer-text h1, .answer-text h2, .answer-text h3,
+  .answer-text h4, .answer-text h5, .answer-text h6 {
+      margin: 12px 0 6px;
+      font-weight: 600;
+      line-height: 1.4;
+  }
+
+  .answer-text h1 {
+      font-size: 18px
+  }
+
+  .answer-text h2 {
+      font-size: 16.5px
+  }
+
+  .answer-text h3 {
+      font-size: 15.5px
+  }
+
+  .answer-text h4, .answer-text h5, .answer-text h6 {
+      font-size: 14.5px
+  }
+
+  .answer-text h1:first-child, .answer-text h2:first-child,
+  .answer-text h3:first-child {
+      margin-top: 0
+  }
+
+  .answer-text ul, .answer-text ol {
+      margin: 4px 0 10px;
+      padding-left: 22px
+  }
+
+  .answer-text li {
+      margin: 3px 0
+  }
+
+  .answer-text code {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 13px;
+      background: var(--surface-2, #f4f4f6);
+      border: 1px solid var(--border, #e5e5ea);
+      border-radius: 5px;
+      padding: 1px 5px;
+  }
+
+  .answer-text a {
+      color: var(--accent, #4a7dbd);
+      text-decoration: none
+  }
+
+  .answer-text a:hover {
+      text-decoration: underline
+  }
+
+  .answer-text del {
+      color: var(--muted, #999)
+  }
   .answer-images{margin-top:10px;display:flex;flex-direction:column;gap:10px}
   .answer-images img{
     display:block;max-width:min(100%,600px);max-height:600px;
@@ -620,9 +690,61 @@ function markProgressFinal(botMsgEl, isError) {
   if (label && isError) label.textContent = '失败';
 }
 
+/* 轻量 Markdown 渲染：先整体转义防 XSS，再按语法加标签。
+   图片标记 ![..](..) 从正文中剔除——图片由后端 image_urls 单独展示，避免重复 */
+function mdToHtml(src) {
+    const lines = String(src == null ? '' : src).replace(/\r\n/g, '\n').split('\n');
+    let html = '';
+    let listTag = null; // 'ul' | 'ol'
+    const closeList = () => {
+        if (listTag) {
+            html += '</' + listTag + '>';
+            listTag = null;
+        }
+    };
+    const inline = (s) => s
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    for (const line of lines) {
+        const h = line.match(/^(#{1,6})\s+(.*)/);
+        const ul = line.match(/^\s*[-*+]\s+(.*)/);
+        const ol = line.match(/^\s*\d+[.、)]\s+(.*)/);
+        if (h) {
+            closeList();
+            const lv = h[1].length;
+            html += '<h' + lv + '>' + inline(escapeHtml(h[2])) + '</h' + lv + '>';
+        } else if (ul) {
+            if (listTag !== 'ul') {
+                closeList();
+                html += '<ul>';
+                listTag = 'ul';
+            }
+            html += '<li>' + inline(escapeHtml(ul[1])) + '</li>';
+        } else if (ol) {
+            if (listTag !== 'ol') {
+                closeList();
+                html += '<ol>';
+                listTag = 'ol';
+            }
+            html += '<li>' + inline(escapeHtml(ol[1])) + '</li>';
+        } else if (!line.trim()) {
+            closeList();
+        } else {
+            closeList();
+            const p = inline(escapeHtml(line));
+            if (p) html += '<p>' + p + '</p>';
+        }
+    }
+    closeList();
+    return html;
+}
+
 function renderAnswerWithImages(containerEl, answerText, imageUrls) {
-  containerEl.innerHTML = '<div class="answer-text">' + escapeHtml(answerText) + '</div>';
-  const urls = Array.isArray(imageUrls) ? imageUrls.filter((u) => typeof u === 'string' && u.trim()) : [];
+    containerEl.innerHTML = '<div class="answer-text">' + mdToHtml(answerText) + '</div>';
+    const urls = Array.isArray(imageUrls) ? imageUrls.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim())) : [];
   if (urls.length) {
     const box = document.createElement('div');
     box.className = 'answer-images';
@@ -630,6 +752,8 @@ function renderAnswerWithImages(containerEl, answerText, imageUrls) {
       const img = document.createElement('img');
       img.src = u;
       img.alt = '知识库配图';
+        /* 地址失联（旧环境/被清理的对象）时移除裂图，不再显示破图标 */
+        img.onerror = () => img.remove();
       box.appendChild(img);
     }
     containerEl.appendChild(box);

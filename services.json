@@ -1,7 +1,6 @@
 {
   "_说明": "智枢套件服务清单。改这里即可增删服务，无需动 start-all.js。cwd 相对本目录；shell:true 用于 npm/cmd 命令。",
-
-  "openBrowser": "http://127.0.0.1:8080",
+  "openBrowser": "http://127.0.0.1:8080/login/",
 
   "middleware": [
     {
@@ -29,6 +28,20 @@
       "command": ["node", "server.js"],
       "port": 8080,
       "openBrowser": true
+    },
+    {
+      "name": "login",
+      "title": "登录注册页",
+      "color": "35",
+      "cwd": "apps/workbench/login",
+      "command": [
+        "node",
+        "server.js"
+      ],
+      "port": 8090,
+      "env": {
+        "NO_BROWSER": "1"
+      }
     },
     {
       "name": "dataagent-frontend",

@@ -141,4 +141,18 @@
   document.getElementById('more-btn').addEventListener('click', function () {
     showToast(cfg.moreTip || '更多智能体正在接入中');
   });
+
+    /* ---------- 退出登录 ---------- */
+    /* 与 login/js/app.js、js/auth-guard.js 使用同一套会话键，三处须同步 */
+    document.getElementById('logout-btn').addEventListener('click', function () {
+        try {
+            sessionStorage.removeItem('zhishu.session');
+        } catch (e) {
+        }
+        try {
+            localStorage.removeItem('zhishu.session.persist');
+        } catch (e) {
+        }
+        location.replace('login/');
+    });
 })();

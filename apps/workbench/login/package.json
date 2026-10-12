@@ -1,0 +1,9 @@
+{
+  "name": "zhishu-login",
+  "version": "1.0.0",
+  "private": true,
+  "description": "智枢登录/注册页 · 独立启动器（纯静态，零依赖）",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -49,7 +49,9 @@ const server = http.createServer((req, res) => {
       return res.end('404 Not Found');
     }
     const type = MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': type });
+      // no-cache：每次导航都向服务器确认/取最新 —— 防止浏览器拿旧版 index.html
+      //（旧版没有登录守卫，会让已加守卫的改动"看起来没生效"）
+      res.writeHead(200, {'Content-Type': type, 'Cache-Control': 'no-cache'});
     res.end(data);
   });
 });

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>登录 · 智枢智能工作台</title>
+    <script>
+        /* 提前应用主题，避免深色模式闪白 */
+        try {
+            if (localStorage.getItem('zhishu.theme') === 'dark') {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {
+        }
+    </script>
+    <link href="css/style.css" rel="stylesheet"/>
+</head>
+<body>
+
+<header class="topbar">
+    <a class="brand" href="../">
+      <span aria-hidden="true" class="mark">
+        <svg viewBox="0 0 24 24"><path d="M12 4 5.6 7.1v5c0 3.7 2.7 6.4 6.4 6.9 3.7-.5 6.4-3.2 6.4-6.9v-5L12 4Z"/><path
+                d="m9.3 12.1 2 2 3.5-4"/></svg>
+      </span>
+        <span class="brand-name">智枢</span>
+    </a>
+
+    <button aria-label="切换深色模式" class="theme-toggle" id="themeToggle" type="button">
+        <svg class="ico-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/>
+        </svg>
+        <svg class="ico-moon" viewBox="0 0 24 24">
+            <path d="M20.5 14.3A8.6 8.6 0 0 1 9.7 3.5a8.6 8.6 0 1 0 10.8 10.8Z"/>
+        </svg>
+    </button>
+</header>
+
+<!-- 已登录提示条：仅当本机存在有效会话时出现 -->
+<div class="session-bar" hidden id="sessionBar">
+    <span aria-hidden="true" class="sb-dot"></span>
+    <span class="sb-text">已登录 <b id="sbWho"></b></span>
+    <span class="sb-spacer"></span>
+    <a class="sb-go" href="../">进入工作台</a>
+    <button class="sb-out" id="logoutBtn" type="button">退出登录</button>
+</div>
+
+<main class="stage">
+    <section class="card" id="card">
+
+        <!-- 斜切面板：登录在右、注册在左 -->
+        <div aria-hidden="true" class="slice"></div>
+
+        <!-- 欢迎语（始终落在淡蓝斜切面上） -->
+        <div class="pane pane-hi">
+            <h2 class="hi-title" id="hiTitle">欢迎回来！</h2>
+            <p class="hi-desc" id="hiDesc">登录后可继续使用问数与知库。</p>
+        </div>
+
+        <!-- 表单 -->
+        <div class="pane pane-form">
+
+            <form class="form" id="formLogin" novalidate>
+                <h1 class="form-title">登录</h1>
+
+                <div class="field" id="f-login-email">
+                    <label for="loginEmail">邮箱</label>
+                    <input aria-describedby="e-login-email" autocomplete="username" id="loginEmail" inputmode="email"
+                           placeholder="name@company.com" spellcheck="false" type="email"/>
+                    <p class="err" id="e-login-email"></p>
+                </div>
+
+                <div class="field" id="f-login-pass">
+                    <div class="label-row">
+                        <label for="loginPass">密码</label>
+                        <button class="link" id="forgotBtn" type="button">忘记密码？</button>
+                    </div>
+                    <div class="pw-wrap">
+                        <input aria-describedby="e-login-pass" autocomplete="current-password" id="loginPass"
+                               placeholder="请输入密码" type="password"/>
+                        <button aria-label="显示密码" aria-pressed="false" class="eye" data-eye="loginPass"
+                                type="button">
+                            <svg class="eye-show" viewBox="0 0 24 24">
+                                <path d="M2.6 12S6.2 5.9 12 5.9 21.4 12 21.4 12 17.8 18.1 12 18.1 2.6 12 2.6 12Z"/>
+                                <circle cx="12" cy="12" r="3.1"/>
+                            </svg>
+                            <svg class="eye-off" viewBox="0 0 24 24">
+                                <path d="M4.2 4.6 19.8 19.4M9.8 6.3A9.9 9.9 0 0 1 12 5.9c5.8 0 9.4 6.1 9.4 6.1a17.6 17.6 0 0 1-3.4 4.1M6.7 8.3A17.7 17.7 0 0 0 2.6 12S6.2 18.1 12 18.1c1 0 1.9-.2 2.8-.5"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="err" id="e-login-pass"></p>
+                </div>
+
+                <label class="check tight">
+                    <input checked id="remember" type="checkbox"/>
+                    <span class="box"><svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+                    <span class="check-text">记住我，7 天内免登录</span>
+                </label>
+
+                <div aria-live="assertive" class="alert" role="alert"></div>
+
+                <button class="btn" id="loginBtn" type="submit">登录</button>
+
+                <p class="foot">还没有账号？
+                    <button class="link" data-go="signup" type="button">立即注册</button>
+                </p>
+            </form>
+
+            <form class="form" hidden id="formSignup" novalidate>
+                <h1 class="form-title">注册</h1>
+
+                <div class="field" id="f-su-name">
+                    <label for="suName">用户名</label>
+                    <input aria-describedby="e-su-name" autocomplete="nickname" id="suName" placeholder="用于显示的名字"
+                           type="text"/>
+                    <p class="err" id="e-su-name"></p>
+                </div>
+
+                <div class="field" id="f-su-email">
+                    <label for="suEmail">邮箱</label>
+                    <input aria-describedby="e-su-email" autocomplete="email" id="suEmail" inputmode="email"
+                           placeholder="name@company.com" spellcheck="false" type="email"/>
+                    <p class="err" id="e-su-email"></p>
+                </div>
+
+                <div class="field" id="f-su-pass">
+                    <div class="label-row">
+                        <label for="suPass">密码</label>
+                    </div>
+                    <div class="pw-wrap">
+                        <input aria-describedby="e-su-pass" autocomplete="new-password" id="suPass"
+                               placeholder="至少 8 位，含字母与数字" type="password"/>
+                        <button aria-label="显示密码" aria-pressed="false" class="eye" data-eye="suPass" type="button">
+                            <svg class="eye-show" viewBox="0 0 24 24">
+                                <path d="M2.6 12S6.2 5.9 12 5.9 21.4 12 21.4 12 17.8 18.1 12 18.1 2.6 12 2.6 12Z"/>
+                                <circle cx="12" cy="12" r="3.1"/>
+                            </svg>
+                            <svg class="eye-off" viewBox="0 0 24 24">
+                                <path d="M4.2 4.6 19.8 19.4M9.8 6.3A9.9 9.9 0 0 1 12 5.9c5.8 0 9.4 6.1 9.4 6.1a17.6 17.6 0 0 1-3.4 4.1M6.7 8.3A17.7 17.7 0 0 0 2.6 12S6.2 18.1 12 18.1c1 0 1.9-.2 2.8-.5"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div aria-hidden="true" class="meter" id="pwMeter"><i></i><i></i><i></i><i></i></div>
+                    <p class="meter-txt" id="pwMeterTxt"></p>
+                    <p class="err" id="e-su-pass"></p>
+                </div>
+
+                <label class="check" id="agreeWrap">
+                    <input id="agree" type="checkbox"/>
+                    <span class="box"><svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+                    <span class="check-text">我已阅读并同意 <a class="link-inline" href="#">服务条款</a> 与 <a class="link-inline"
+                                                                                                               href="#">隐私政策</a></span>
+                </label>
+
+                <div aria-live="assertive" class="alert" role="alert"></div>
+
+                <button class="btn" id="signupBtn" type="submit">注册</button>
+
+                <p class="foot">已有账号？
+                    <button class="link" data-go="login" type="button">返回登录</button>
+                </p>
+            </form>
+
+        </div>
+
+    </section>
+</main>
+
+<!-- 重置密码（本机账号体系，直接覆盖该账号的密码） -->
+<dialog aria-labelledby="resetTitle" class="sheet" id="resetDlg">
+    <form class="sheet-in" id="resetForm" novalidate>
+        <h3 id="resetTitle">重置密码</h3>
+        <p class="sheet-sub">填写注册时使用的邮箱，验证通过后可为该账号设置新密码。</p>
+
+        <div class="field" id="f-rs-email">
+            <label for="rsEmail">邮箱</label>
+            <input aria-describedby="e-rs-email" autocomplete="username" id="rsEmail" inputmode="email"
+                   placeholder="name@company.com" spellcheck="false" type="email"/>
+            <p class="err" id="e-rs-email"></p>
+        </div>
+
+        <div class="field" id="f-rs-pass">
+            <label for="rsPass">新密码</label>
+            <input aria-describedby="e-rs-pass" autocomplete="new-password" id="rsPass"
+                   placeholder="至少 8 位，含字母与数字" type="password"/>
+            <p class="err" id="e-rs-pass"></p>
+        </div>
+
+        <div class="field" id="f-rs-pass2">
+            <label for="rsPass2">确认新密码</label>
+            <input aria-describedby="e-rs-pass2" autocomplete="new-password" id="rsPass2"
+                   placeholder="再次输入新密码" type="password"/>
+            <p class="err" id="e-rs-pass2"></p>
+        </div>
+
+        <div aria-live="assertive" class="alert" role="alert"></div>
+
+        <div class="sheet-act">
+            <button class="btn ghost" id="resetCancel" type="button">取消</button>
+            <button class="btn" id="resetSubmit" type="submit">确认重置</button>
+        </div>
+    </form>
+</dialog>
+
+<div aria-live="polite" class="toast" id="toast" role="status"></div>
+
+<script src="js/crypto.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

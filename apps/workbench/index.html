@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
+    <!-- 登录守卫：必须最先加载。未登录会在渲染前直接跳到 login/，不会闪一下工作台 -->
+    <script src="js/auth-guard.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>智枢智能工作台</title>
   <link rel="stylesheet" href="css/style.css" />
@@ -20,6 +22,15 @@
   <header class="head">
     <h1 id="app-title">智枢智能工作台</h1>
     <p id="app-subtitle">统一入口，连接数据与知识</p>
+      <button class="logout" id="logout-btn" title="退出登录" type="button">
+          <svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+               viewBox="0 0 24 24" width="15">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" x2="9" y1="12" y2="12"/>
+          </svg>
+          退出登录
+      </button>
   </header>
 
   <!-- 智能体卡片区（由 js/main.js 依据 js/config.js 渲染） -->
