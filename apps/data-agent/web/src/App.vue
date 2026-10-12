@@ -2,99 +2,102 @@
   <div class="app-shell">
     <NavBar
       :dark="dark"
-      @open-history="drawerOpen = true"
       @new-chat="resetChat"
       @toggle-dark="toggleDark"
     />
 
-    <main class="stage">
-      <!-- 首屏 Hero（无对话时展示） -->
-      <section v-if="messages.length === 0" class="hero">
-        <h1 class="hero-title">用自然语言查询你的数据</h1>
-        <p class="hero-sub">输入一个问题，Data Agent 自动理解、检索并生成答案</p>
-        <div class="chips">
-          <button v-for="s in suggestions" :key="s" class="chip" type="button" @click="send(s)">
-            {{ s }}
-          </button>
-        </div>
-        <div v-if="recentHistory.length" class="recent">
-          <span class="recent-label">最近</span>
-          <button v-for="h in recentHistory" :key="h.time" class="recent-item" type="button" @click="send(h.q)">
-            {{ h.q }}
-          </button>
-        </div>
-      </section>
-
-      <!-- 对话流 -->
-      <MessageList
-        :messages="messages"
-        @send="send"
-        @retry="retry"
-        @copy="copyResult"
-        @export="exportResult"
+    <div class="body">
+      <!-- 左栏：历史会话（常驻） -->
+      <HistorySidebar
+        :history="history"
+        :active="activeQuery"
+        @select="send"
+        @delete="removeHistory"
+        @clear="clearHistory"
       />
-    </main>
 
-    <!-- 悬浮输入栏 -->
-    <div class="composer-wrap">
-      <form class="composer" @submit.prevent="send(question)">
-        <button type="button" class="icon-btn" title="历史会话" aria-label="历史会话" @click="drawerOpen = true">
-          <svg width="18" height="18" viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3" />
-            <path d="M8 4.6V8l2.4 1.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
-        <input
-          ref="inputEl"
-          v-model="question"
-          class="input-pill"
-          type="text"
-          :placeholder="loading ? '正在生成答案…' : '问我任何关于数据的问题，或输入 / 选择模板'"
-          :disabled="loading"
-          @keydown="onInputKeydown"
-        />
+      <!-- 中栏：对话 -->
+      <main class="center">
+        <section class="stage">
+          <!-- 首屏 Hero（无对话时展示） -->
+          <section v-if="messages.length === 0" class="hero">
+            <h1 class="hero-title">用自然语言查询你的数据</h1>
+            <p class="hero-sub">输入一个问题，Data Agent 自动理解、检索并生成答案</p>
+            <div class="chips">
+              <button v-for="s in suggestions" :key="s" class="chip" type="button" @click="send(s)">
+                {{ s }}
+              </button>
+            </div>
+            <div v-if="recentHistory.length" class="recent">
+              <span class="recent-label">最近</span>
+              <button v-for="h in recentHistory" :key="h.time" class="recent-item" type="button" @click="send(h.q)">
+                {{ h.q }}
+              </button>
+            </div>
+          </section>
 
-        <!-- 斜杠命令菜单 -->
-        <div v-if="showSlash" class="slash-menu">
-          <div
-            v-for="(t, i) in filteredSlash"
-            :key="t.key"
-            class="slash-item"
-            :class="{ on: i === slashIndex }"
-            @mousedown.prevent="applySlash(t)"
-          >
-            <b>{{ t.key }}</b>{{ t.label }}
-            <small>{{ t.expand }}</small>
-          </div>
-          <div v-if="!filteredSlash.length" class="slash-item muted">没有匹配的模板</div>
+          <!-- 对话流（搜索流程不再出现在这里，见右栏） -->
+          <MessageList
+            :messages="messages"
+            @send="send"
+            @retry="retry"
+            @copy="copyResult"
+            @export="exportResult"
+          />
+        </section>
+
+        <!-- 悬浮输入栏（居中于中栏） -->
+        <div class="composer-wrap">
+          <form class="composer" @submit.prevent="send(question)">
+            <input
+              ref="inputEl"
+              v-model="question"
+              class="input-pill"
+              type="text"
+              :placeholder="loading ? '正在生成答案…' : '问我任何关于数据的问题，或输入 / 选择模板'"
+              :disabled="loading"
+              @keydown="onInputKeydown"
+            />
+
+            <!-- 斜杠命令菜单 -->
+            <div v-if="showSlash" class="slash-menu">
+              <div
+                v-for="(t, i) in filteredSlash"
+                :key="t.key"
+                class="slash-item"
+                :class="{ on: i === slashIndex }"
+                @mousedown.prevent="applySlash(t)"
+              >
+                <b>{{ t.key }}</b>{{ t.label }}
+                <small>{{ t.expand }}</small>
+              </div>
+              <div v-if="!filteredSlash.length" class="slash-item muted">没有匹配的模板</div>
+            </div>
+
+            <button v-if="loading" type="button" class="stop-btn" @click="stop">
+              <span class="sq"></span>停止
+            </button>
+            <button v-else type="submit" class="send-btn" :disabled="!question.trim()" aria-label="发送">
+              <svg width="18" height="18" viewBox="0 0 16 16">
+                <path d="M3 8h9M8 4l4 4-4 4" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </form>
         </div>
+      </main>
 
-        <button v-if="loading" type="button" class="stop-btn" @click="stop">
-          <span class="sq"></span>停止
-        </button>
-        <button v-else type="submit" class="send-btn" :disabled="!question.trim()" aria-label="发送">
-          <svg width="18" height="18" viewBox="0 0 16 16">
-            <path d="M3 8h9M8 4l4 4-4 4" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
-      </form>
+      <!-- 右栏：搜索流程（常驻） -->
+      <StepsPanel :runs="runs" />
     </div>
-
-    <HistoryDrawer
-      :open="drawerOpen"
-      :history="history"
-      @close="drawerOpen = false"
-      @select="send"
-      @delete="removeHistory"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, reactive, nextTick, computed, onMounted } from 'vue'
 import NavBar from './components/NavBar.vue'
 import MessageList from './components/MessageList.vue'
-import HistoryDrawer from './components/HistoryDrawer.vue'
+import HistorySidebar from './components/HistorySidebar.vue'
+import StepsPanel from './components/StepsPanel.vue'
 
 const API_URL = '/api/query'
 const HISTORY_KEY = 'data-agent-history'
@@ -103,9 +106,11 @@ const DARK_KEY = 'data-agent-dark'
 const question = ref('')
 const loading = ref(false)
 const messages = ref([])
-const drawerOpen = ref(false)
 const history = ref(loadHistory())
 const inputEl = ref(null)
+const activeQuery = ref('')
+/* 右栏展示的查询流程，仅保留当前一次：{ q, steps:[{text,dur}], totalDur, done } */
+const runs = ref([])
 
 const suggestions = ['查询上个月总销售额', '哪个产品销量最高', '各区域销量对比']
 
@@ -148,9 +153,15 @@ function removeHistory(time) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history.value))
 }
 
+function clearHistory() {
+  history.value = []
+  localStorage.removeItem(HISTORY_KEY)
+}
+
 function resetChat() {
   messages.value = []
   question.value = ''
+  runs.value = []
 }
 
 /* ── 斜杠命令 ── */
@@ -208,21 +219,16 @@ function send(q, opts = {}) {
   loading.value = true
   question.value = ''
   slashIndex.value = 0
-  drawerOpen.value = false
+  activeQuery.value = text
 
   messages.value.push({ role: 'user', type: 'text', content: text })
 
-  const stepIndex =
-    messages.value.push({
-      role: 'assistant',
-      type: 'steps',
-      steps: [],
-      totalDur: 0,
-      collapsed: false,
-    }) - 1
-
-  const stepsMsg = messages.value[stepIndex]
-  const steps = stepsMsg.steps
+  /* 本次查询的流程卡 → 右栏（不再进入聊天流）。
+     必须 reactive()：普通对象直接改字段不经过代理，不会触发右栏重渲染。
+     每次搜索整体重置：右栏只展示当前这一次的流程，从头开始 */
+  const run = reactive({ q: text, steps: [], totalDur: 0, done: false })
+  runs.value = [run]
+  const steps = run.steps
 
   nextTick(scrollToBottom)
 
@@ -271,11 +277,9 @@ function send(q, opts = {}) {
             steps.push({ text: data.stage, dur: null, start: performance.now() })
           } else if (data.error) {
             finalizeStep()
-            stepsMsg.collapsed = true
             messages.value.push({ role: 'assistant', type: 'error', content: data.error, retry: text })
           } else if (Array.isArray(data.result)) {
             finalizeStep()
-            stepsMsg.collapsed = true
             messages.value.push({
               role: 'assistant',
               type: 'table',
@@ -289,10 +293,11 @@ function send(q, opts = {}) {
         }
       }
 
-      stepsMsg.totalDur = +((performance.now() - stageStart) / 1000).toFixed(1)
-      stepsMsg.collapsed = true
+      run.totalDur = +((performance.now() - stageStart) / 1000).toFixed(1)
+      run.done = true
     })
     .catch((e) => {
+      run.done = true
       if (e.name === 'AbortError') {
         messages.value.push({ role: 'assistant', type: 'error', content: '已停止生成。', retry: text })
       } else {
@@ -355,6 +360,18 @@ function scrollToBottom() {
   flex-direction: column;
   height: 100%;
   position: relative;
+}
+/* 三栏：历史 | 对话 | 流程 */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.center {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
 }
 .stage {
   flex: 1;
@@ -434,9 +451,9 @@ function scrollToBottom() {
   background: var(--accent-soft);
 }
 
-/* 悬浮输入栏 */
+/* 悬浮输入栏（相对中栏居中，不再横跨整屏） */
 .composer-wrap {
-  position: fixed;
+  position: absolute;
   left: 0;
   right: 0;
   bottom: 28px;
@@ -472,24 +489,6 @@ function scrollToBottom() {
 }
 .input-pill::placeholder {
   color: var(--text-tertiary);
-}
-.icon-btn {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.icon-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--accent);
 }
 .send-btn {
   width: 40px;

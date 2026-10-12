@@ -39,12 +39,6 @@
           <path d="M3 8h10M8 3v10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
         </svg>
       </button>
-      <button class="icon-btn" title="历史会话" aria-label="历史会话" @click="$emit('open-history')">
-        <svg width="17" height="17" viewBox="0 0 16 16">
-          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3" />
-          <path d="M8 4.6V8l2.4 1.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </button>
     </div>
   </header>
 </template>
@@ -53,8 +47,9 @@
 // 注：connected 为视觉健康度指示，默认 true（环境就绪时）。
 // 若以后后端提供 /health 等健康检查端点，可在此处轮询真实状态。
 // dark 状态由父组件（App）统一控制并响应 toggle-dark 事件。
+// 历史会话已改为左侧常驻栏（HistorySidebar），不再需要弹出按钮。
 defineProps({ dark: { type: Boolean, default: false } })
-defineEmits(['open-history', 'new-chat', 'toggle-dark'])
+defineEmits(['new-chat', 'toggle-dark'])
 const sources = ['MySQL', 'ES', 'Qdrant', 'Embed']
 const connected = true
 </script>

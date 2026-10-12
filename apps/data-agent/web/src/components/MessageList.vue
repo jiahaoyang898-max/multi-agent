@@ -7,30 +7,6 @@
         <!-- 纯文本 -->
         <div v-if="m.type === 'text'">{{ m.content }}</div>
 
-        <!-- 步骤流水线（可折叠 + 每步耗时） -->
-        <div v-else-if="m.type === 'steps'" class="steps-block">
-          <div class="steps-sum" @click="m.collapsed = !m.collapsed">
-            <span class="check">✓</span>
-            <span class="summary">
-              已完成 {{ m.steps.length }} 步 · <span class="num">{{ m.totalDur }}s</span>
-            </span>
-            <span class="chev" :class="{ open: !m.collapsed }">▾</span>
-          </div>
-          <div v-show="!m.collapsed" class="steps-list">
-            <div
-              v-for="(s, si) in m.steps"
-              :key="si"
-              class="step"
-              :class="{ slow: s.dur !== null && s.dur >= 1.5, running: s.dur === null }"
-            >
-              <span class="sdot"></span>
-              <span class="stext">{{ s.text }}</span>
-              <span v-if="s.dur !== null" class="sdur num">{{ s.dur }}s</span>
-              <span v-else class="sdur run">运行中…</span>
-            </div>
-          </div>
-        </div>
-
         <!-- 结果：KPI 大数卡 / 表格 + 图表 -->
         <div v-else-if="m.type === 'table'">
           <!-- 单行单值 → KPI 大数卡 -->
@@ -216,85 +192,6 @@ function pctOf(m, row) {
 }
 .row.assistant .bubble {
   border-bottom-left-radius: 6px;
-}
-
-/* 步骤流水线 */
-.steps-block {
-  font-size: 13.5px;
-}
-.steps-sum {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
-  padding: 4px 0;
-}
-.steps-sum .check {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(52, 199, 89, 0.14);
-  color: #34c759;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 700;
-}
-.steps-sum .summary {
-  color: var(--text-secondary);
-}
-.steps-sum .chev {
-  margin-left: auto;
-  color: var(--text-tertiary);
-  font-size: 12px;
-  transition: transform 0.2s ease;
-}
-.steps-sum .chev.open {
-  transform: rotate(180deg);
-}
-.steps-list {
-  margin-top: 10px;
-  border-top: 1px dashed var(--border-strong);
-  padding-top: 10px;
-}
-.step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 3px 0;
-  color: var(--text);
-}
-.step .sdot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #34c759;
-  flex: 0 0 auto;
-}
-.step.slow .sdot {
-  background: #e8a13c;
-}
-.step.running .sdot {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
-  animation: pulse 1s infinite;
-}
-.step .sdur {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.step.slow .sdur {
-  color: #e8a13c;
-  font-weight: 600;
-}
-.step.running .sdur {
-  color: var(--accent);
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 /* KPI 大数卡 */

@@ -14,6 +14,8 @@ from utils.sse_utils import push_to_session, SSEEvent
 from utils.task_utils import add_done_task, set_task_result
 
 MAX_CONTEXT_CHARS = 12000
+# 仅接受 http(s) 绝对地址，过滤「图片路径」等文档占位符与相对路径
+URL_PATTERN = re.compile(r'^https?://', re.IGNORECASE)
 
 class NodeAnswerOutput(NodeBase):
     name: str = "node_answer_output"
@@ -155,7 +157,7 @@ class NodeAnswerOutput(NodeBase):
         for i,doc in enumerate(docs):
             url = (doc.get("url") or "").strip()
             if url:
-                if url.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg')):
+                if url.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg')) and URL_PATTERN.match(url):
                     if url not in seen:
                         logger.debug(f"文档[{i}]发现图片URL(字段)：{url}")
                         seen.add(url)
@@ -165,7 +167,7 @@ class NodeAnswerOutput(NodeBase):
                 matches = md_img_pattern.findall(text)
                 for img_url in matches:
                     img_url = img_url.strip()
-                    if img_url and img_url not in seen:
+                    if img_url and URL_PATTERN.match(img_url) and img_url not in seen:
                         logger.debug(f"文档[{i}] 正文发现 Markdown 图片: {img_url}")
                         seen.add(img_url)
                         images.append(img_url)
