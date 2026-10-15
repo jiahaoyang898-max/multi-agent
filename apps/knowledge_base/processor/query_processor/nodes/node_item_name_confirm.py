@@ -242,6 +242,23 @@ class NodeItemNameConfirm(NodeBase):
             if not ranked:
                 logger.info(f"步骤6：型号「{extracted_name}」全部候选低于噪声下限，视为无匹配")
                 continue
+            # 1.1) 同一型号可能因重复导入在 kb_item_names 里存在多条记录（例如
+            #      hak180产品安全手册 / hak180产品安全手册_new 都写了同一个型号），
+            #      它们分数完全相同。若不去重，第二条会被当成「并列候选」，
+            #      导致唯一命中也被迫追问澄清。这里按归一化型号名去重，只保留最高分的一条。
+            deduped_ranked: List[Dict[str, Any]] = []
+            seen_ranked_names = set()
+            for cand in ranked:
+                key = _normalize_item_name(cand.get("item_name"))
+                if key in seen_ranked_names:
+                    continue
+                seen_ranked_names.add(key)
+                deduped_ranked.append(cand)
+            if len(deduped_ranked) != len(ranked):
+                logger.info(
+                    f"步骤6：型号「{extracted_name}」候选去重 {len(ranked)} → {len(deduped_ranked)}（同名重复记录）"
+                )
+            ranked = deduped_ranked
             top = ranked[0]
             top_score = top.get("score") or 0
 

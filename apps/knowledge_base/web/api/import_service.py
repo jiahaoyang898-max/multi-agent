@@ -1,3 +1,10 @@
+# 必须放在任何 langchain / processor 导入之前：
+# langchain_core 会 `from transformers import GPT2TokenizerFast`，进而把 torch +
+# 整套 CUDA DLL 拖进本进程（纯 CPU 环境用不到，白占 1.5~2GB 提交量）。
+from tool.no_torch_guard import disable_local_torch
+
+disable_local_torch()
+
 import os
 import shutil
 import uuid
@@ -117,7 +124,6 @@ async def get_task_progress(task_id: str):
 if __name__ == "__main__":
     # 注意：导入服务固定使用 8104，不能沿用 8100（8100 属于问数后端 data-agent）
     uvicorn.run(app=app, host="127.0.0.1", port=8104)
-
 
 
 

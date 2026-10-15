@@ -15,9 +15,9 @@ dependencies = [
     "numpy>=2.4.6",
     "pymongo>=4.17.0",
     "python-dotenv>=1.2.2",
-    "torch>=2.11.0",
-    "torchvision>=0.26.0",
-    "torchaudio>=2.11.0",
+    "torch==2.11.0",
+    "torchvision==0.26.0",
+    "torchaudio==2.11.0",
     "flagembedding>=1.3.5",
     "transformers>=4.45.0,<5.0.0",
     "pymilvus[model]>=3.0.0",
@@ -26,12 +26,13 @@ dependencies = [
     "uvicorn[standard]>=0.51.0",
 ]
 [tool.uv.sources]
-# 强制从 NVIDIA 源安装
-torch = { index = "pytorch-cuda" }
-torchvision = { index = "pytorch-cuda" }
-torchaudio = { index = "pytorch-cuda" }
+# 纯 CPU 部署：从 PyTorch CPU 源安装，避免把整套 CUDA 运行库拖进来
+# （cu128 版 torch 目录约 4.2GB，进程启动即占用 1.5GB 以上提交内存）
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+torchaudio = { index = "pytorch-cpu" }
 
 [[tool.uv.index]]
-name = "pytorch-cuda"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
 explicit = true

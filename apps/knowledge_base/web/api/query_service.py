@@ -2,6 +2,13 @@
 """
 查询流程的接口定义
 """
+# 必须放在任何 langchain / processor 导入之前：
+# langchain_core 会 `from transformers import GPT2TokenizerFast`，进而把 torch +
+# 整套 CUDA DLL 拖进本进程（纯 CPU 环境用不到，白占 1.5~2GB 提交量）。
+from tool.no_torch_guard import disable_local_torch
+
+disable_local_torch()
+
 import uuid
 from pathlib import Path
 
@@ -9,6 +16,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import FileResponse, StreamingResponse
 
 from processor.query_processor.main_graph import KBQueryWorkflow
@@ -87,8 +95,13 @@ async def query(background_tasks: BackgroundTasks, request: QueryRequest):
             "session_id":session_id
         }
     else:
-        # 同步运行
-        run_query_graph(session_id, user_query, is_stream)
+        # 同步运行。
+        # 注意：run_query_graph 内部是纯同步阻塞调用（LangGraph + LLM + Milvus，
+        # 单次查询 30~60s）。如果直接在这个 async 处理函数里调用，会把 uvicorn
+        # 的事件循环整个占满——查询进行期间 /health 以及所有并发请求都会挂起，
+        # 外部表现为「服务健康检查超时（可达性掉到 5/6）」。
+        # 放进线程池执行：单次请求语义不变，但不再阻塞事件循环。
+        await run_in_threadpool(run_query_graph, session_id, user_query, is_stream)
         answer = get_task_result(session_id,"answer","")
         return {
             "message":"处理完成！",
