@@ -60,6 +60,9 @@ temp-files/
 *.tmp
 *.bak
 
+# ---------- 本机运行时文件（含会话 token / 端口占用态，一律不入库） ----------
+apps/workbench/.session-store.json
+
 # ---------- 数据库 / 向量库本地数据卷 ----------
 volumes/
 data/
