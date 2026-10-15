@@ -143,7 +143,8 @@
   });
 
     /* ---------- 退出登录 ---------- */
-    /* 与 login/js/app.js、js/auth-guard.js 使用同一套会话键，三处须同步 */
+    /* 与 login/js/app.js、js/auth-guard.js 使用同一套会话键，四处须同步
+       （第四处 = 工作台服务端 :8180 的 /api/session 会话镜像） */
     document.getElementById('logout-btn').addEventListener('click', function () {
         try {
             sessionStorage.removeItem('zhishu.session');
@@ -153,6 +154,24 @@
             localStorage.removeItem('zhishu.session.persist');
         } catch (e) {
         }
+        clearSharedSession();
         location.replace('login/');
     });
+
+    /**
+     * 清掉服务端的跨源会话镜像，让 :8173 问数前端也能立刻认出「已经没人登录了」。
+     * 诚实边界：这是**前端体验级软守门**，不是安全机制 —— 页面可以被人绕过、
+     * 接口也可以被 curl 直接 POST 伪造；真要做权限必须上后端鉴权。
+     * 失败一律吞掉：清不掉远端会话也不该拦住用户退出。
+     */
+    function clearSharedSession() {
+        try {
+            /* 工作台页面就是工作台服务端自己托管的，根相对路径必然同源
+               （8180 或任何等价端口），不写死端口也不跨源，省掉 CORS。 */
+            var p = fetch('/api/session', {method: 'DELETE', cache: 'no-store', keepalive: true});
+            if (p && p.catch) p.catch(function () {
+            });
+        } catch (e) {
+        }
+    }
 })();

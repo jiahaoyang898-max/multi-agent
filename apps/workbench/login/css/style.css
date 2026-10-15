@@ -770,6 +770,10 @@ body {
     outline-offset: 3px;
 }
 
+.btn-demo {
+    margin-top: 10px;
+}
+
 .btn.ghost {
     background: transparent;
     color: var(--ink-soft);

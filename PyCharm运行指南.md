@@ -46,10 +46,10 @@ PyCharm 全局 SDK 表里这两个解释器**指向的是旧的项目副本**，
 
 | 顺序 | 运行配置 | 端口 | 依赖 | 说明 |
 |---|---|---|---|---|
-| 1 | ① 问数后端 | **8000** | Docker 中间件 | 独立，可随时启动 |
-| 2 | ② 知库·嵌入服务 BGE-M3 | **8002** | — | **必须先启动**，下面两个都依赖它 |
-| 3 | ③ 知库·查询服务 | **8001** | 8002 | 等 8002 显示模型加载完成再启 |
-| 4 | ④ 知库·导入服务 | **8004** | 8002 | 同上 |
+| 1 | ① 问数后端 | **8100** | Docker 中间件 | 独立，可随时启动 |
+| 2 | ② 知库·嵌入服务 BGE-M3 | **8102** | — | **必须先启动**，下面两个都依赖它 |
+| 3 | ③ 知库·查询服务 | **8101** | 8102 | 等 8102 显示模型加载完成再启 |
+| 4 | ④ 知库·导入服务 | **8104** | 8102 | 同上 |
 
 **②启动较慢**（首次要加载 BGE-M3 模型，约 10~20 秒，占约 1.4 GB 内存），
 控制台出现 `model_loaded` 相关日志后再启动 ③ ④。
@@ -58,8 +58,8 @@ PyCharm 全局 SDK 表里这两个解释器**指向的是旧的项目副本**，
 
 | 服务 | 目录 | 命令 |
 |---|---|---|
-| 问数前端 (5173) | `apps/data-agent/web` | `npm run dev` |
-| 智枢工作台 (8080) | `apps/workbench` | `node server.js` |
+| 问数前端 (8173) | `apps/data-agent/web` | `npm run dev` |
+| 智枢工作台 (8180) | `apps/workbench` | `node server.js` |
 
 在 PyCharm 的 Terminal 里执行即可，或单独开命令行窗口。
 
@@ -69,10 +69,10 @@ PyCharm 全局 SDK 表里这两个解释器**指向的是旧的项目副本**，
 
 | 检查项 | 地址 | 期望 |
 |---|---|---|
-| 问数后端 | http://127.0.0.1:8000/docs | Swagger 页面 |
-| 知库·嵌入 | http://127.0.0.1:8002/health | `{"status":"ok","model_loaded":true}` |
-| 知库·查询 | http://127.0.0.1:8001/health | `{"ok":true}` |
-| 知库·导入 | http://127.0.0.1:8004/docs | Swagger 页面 |
+| 问数后端 | http://127.0.0.1:8100/docs | Swagger 页面 |
+| 知库·嵌入 | http://127.0.0.1:8102/health | `{"status":"ok","model_loaded":true}` |
+| 知库·查询 | http://127.0.0.1:8101/health | `{"ok":true}` |
+| 知库·导入 | http://127.0.0.1:8104/docs | Swagger 页面 |
 
 浏览器能打开对应页面 = 服务正常。
 
@@ -97,7 +97,7 @@ apps\knowledge_base\.venv\Scripts\python.exe check-conn-knowledge-base.py
 | 脚本 | 结果 | 明细 |
 |---|---|---|
 | `check-conn-data-agent.py` | **5 / 5** | MySQL 8.0.46（meta 4 表 / dw 5 表）· Qdrant 3 集合 · ES 8.19.10 · TEI HTTP 200 |
-| `check-conn-knowledge-base.py` | **3 / 3** | Milvus 19530（kb_chunks 14 行 / kb_item_names 3 行）· MongoDB kb001 · MinIO bucket 存在 |
+| `check-conn-knowledge-base.py` | **3 / 3** | Milvus 29530（kb_chunks 14 行 / kb_item_names 3 行）· MongoDB kb001 · MinIO bucket 存在 |
 
 > 知库脚本里「BGE-M3 嵌入服务」一项会显示 FAIL —— 这是**预期**的，
 > 因为它是 Python 服务，需要在 PyCharm 里点 ② 启动后才可用。
@@ -119,8 +119,8 @@ apps\knowledge_base\.venv\Scripts\python.exe check-conn-knowledge-base.py
    docker stop data-agent-kibana     # 约占 680 MB，纯日志面板，平时可不跑
    ```
 
-3. **`import_service.py` 的端口已修正为 8004**。原先文件里写死 `port=8000`，
-   与问数后端撞端口；命令行启动时被 `--port 8004` 覆盖才没暴露，
+3. **`import_service.py` 的端口已修正为 8104**。原先文件里写死 `port=8000`，
+   与问数后端撞端口；命令行启动时被 `--port 8104` 覆盖才没暴露，
    但在 PyCharm 里直接点运行就会冲突。
 
 4. 若运行配置没出现，说明 `.idea` 被 PyCharm 的内存状态覆盖了 ——

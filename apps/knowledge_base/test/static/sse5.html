@@ -28,7 +28,7 @@
             const sessionId = "query_" + Date.now();
 
             // 3. POST提交查询内容
-            const response = await fetch("http://127.0.0.1:8001/submit_query", {
+            const response = await fetch("http://127.0.0.1:8101/submit_query", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({query: query, session_id: sessionId})
@@ -42,7 +42,7 @@
             }
 
             // 5. 建立SSE连接
-            const eventSource = new EventSource(`http://127.0.0.1:8001/stream/${sessionId}`);
+            const eventSource = new EventSource(`http://127.0.0.1:8101/stream/${sessionId}`);
 
             // 6. 监听事件
             // 监听进度事件（progress）

@@ -4,19 +4,19 @@
  *
  * 用法：
  *     cd apps/workbench/login
- *     npm start                     # 打开 http://127.0.0.1:8090/
- *     PORT=9000 npm start           # 指定端口
+ *     npm start                     # 打开 http://127.0.0.1:8190/
+ *     PORT=8191 npm start           # 指定端口
  *     NO_BROWSER=1 npm start        # 不自动开浏览器（CI / 远程终端用）
  *
  * 特点：
  *   · 只托管本目录，**不依赖 Docker / Python / 后端服务**，无需联网，秒开。
- *   · 端口默认 8090；若被占用会自动向后找一个空闲端口，并在控制台打印真实地址。
+ *   · 端口默认 8190；若被占用会自动向后找一个空闲端口，并在控制台打印真实地址。
  *   · 每次请求实时读盘，改完 html/css/js 刷新浏览器即可，无需重启。
  *
  * 与整套系统的关系：
  *   · 本文件只是"单独看这个页面"的快捷方式，不影响原有任何启动方式。
  *   · 用仓库根目录的 `npm start` 启动整套时，本页面地址是
- *     http://127.0.0.1:8080/login/  （由 apps/workbench/server.js 托管）。
+ *     http://127.0.0.1:8180/login/  （由 apps/workbench/server.js 托管）。
  */
 
 const http = require('http');
@@ -25,7 +25,7 @@ const path = require('path');
 const {spawn} = require('child_process');
 
 const ROOT = __dirname;
-const BASE_PORT = Number(process.env.PORT) || 8090;
+const BASE_PORT = Number(process.env.PORT) || 8190;
 const MAX_TRIES = 20;
 const HOST = '127.0.0.1';
 
@@ -131,7 +131,7 @@ function banner(port) {
     console.log(line);
     console.log(`  本页地址      ${url}`);
     console.log(`  页面内"进入工作台"在独立模式下会回到本页`);
-    console.log(`  （整套系统下为 http://127.0.0.1:8080/login/）`);
+    console.log(`  （整套系统下为 http://127.0.0.1:8180/login/）`);
     console.log('');
     console.log('  停止：Ctrl + C');
     console.log(line);

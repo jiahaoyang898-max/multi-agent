@@ -115,8 +115,8 @@ async def get_task_progress(task_id: str):
     return task_status_info
 
 if __name__ == "__main__":
-    # 注意：导入服务固定使用 8004，不能沿用 8000（8000 属于问数后端 data-agent）
-    uvicorn.run(app=app, host="127.0.0.1", port=8004)
+    # 注意：导入服务固定使用 8104，不能沿用 8100（8100 属于问数后端 data-agent）
+    uvicorn.run(app=app, host="127.0.0.1", port=8104)
 
 
 

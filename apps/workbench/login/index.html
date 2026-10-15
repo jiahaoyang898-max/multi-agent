@@ -103,6 +103,8 @@
 
                 <button class="btn" id="loginBtn" type="submit">登录</button>
 
+                <button class="btn ghost btn-demo" id="demoBtn" type="button">一键填入演示账号</button>
+
                 <p class="foot">还没有账号？
                     <button class="link" data-go="signup" type="button">立即注册</button>
                 </p>
@@ -153,6 +155,9 @@
                     <span class="check-text">我已阅读并同意 <a class="link-inline" href="#">服务条款</a> 与 <a class="link-inline"
                                                                                                                href="#">隐私政策</a></span>
                 </label>
+                <!-- 未勾选「同意」时的可读文字提示：由 js/app.js 的 setAgreeErr() 填文案，
+                     复用 .err 视觉（危险色 + 小号字），不新造样式 -->
+                <p class="err" id="agreeErr" style="max-height:0"></p>
 
                 <div aria-live="assertive" class="alert" role="alert"></div>
 

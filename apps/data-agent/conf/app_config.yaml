@@ -11,32 +11,32 @@ logging:
 
 db_meta:
   host: localhost
-  port: 3306
+  port: 23306
   user: itwwy
   password: itwwy123
   database: meta
 
 db_dw:
   host: localhost
-  port: 3306
+  port: 23306
   user: itwwy
   password: itwwy123
   database: dw
 
 qdrant:
   host: localhost
-  port: 6333
+  port: 26333
   embedding_size: 1024
 
 embedding:
   host: localhost
-  port: 8081
+  port: 28085
   model: BAAI/bge-large-zh-v1.5
 
 
 es:
   host: localhost
-  port: 9200
+  port: 29200
   index_name: data_agent
 
 

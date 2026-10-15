@@ -12,24 +12,27 @@
 
 | 环境 | 目录 | Compose 项目名 | 容器名前缀 | 数据卷 | 当前状态 |
 |---|---|---|---|---|---|
-| 新环境（推荐日常用） | `D:\data-agent\docker-dataagent` | `data-agent-infra` | `data-agent-*` | `data-agent-infra_*` | 运行中 |
-| 旧环境（备份 / 并存用） | `D:\data-agent\docker` | `docker` | 无前缀（mysql/es 等） | `docker_*` | 已停止，容器与数据卷均保留 |
+| **主用（`npm start` 走这套）** | `apps/data-agent/docker-dataagent` | `data-agent-infra` | `data-agent-*` | `data-agent-infra_*` | 由仓库根 `services.json` 拉起 |
+| 变体（备份 / 并存用） | `apps/data-agent/docker` | `docker` | 无前缀（mysql/es 等） | `docker_*` | 手动才起，日常不用 |
+
+> 注：`D:\data-agent\...` 与 `D:\knowledge_base\...` 是本仓库之外的**旧副本**，端口仍是迁移前的原值（3306/8081/9000…，其中 3306 已被 `cs-mysql`、8081 已被 `cs-frontend` 占走，实际已起不来）。**佳总 2026-10-15 拍板：以仓库内为准，外部副本退役**（保留文件不动，但不再作为入口，也不与仓库内同步改端口）。
+> 两套环境的 compose 项目名相同（`data-agent-infra` / `docker`），因此**数据卷是同一批**——从外部副本切到仓库内不会丢已初始化的库。
 
 ### 中间件端口表
 
 | 服务 | 镜像 | 端口 | 用途 |
 |---|---|---|---|
-| MySQL | mysql:8.0 | 3306 | 元数据库 `meta` + 数仓 `dw`（自动初始化） |
-| Elasticsearch | 8.19.10 + IK 中文分词（本地构建） | 9200 | 搜索 |
-| Kibana | kibana:8.19.10 | 5601 | ES 可视化 |
-| Qdrant | qdrant:v1.16 | 6333 / 6334 | 向量库 |
-| Embedding | TEI (CPU) + bge-large-zh-v1.5 | 8081 | 文本向量化 |
+| MySQL | mysql:8.0 | 23306 | 元数据库 `meta` + 数仓 `dw`（自动初始化） |
+| Elasticsearch | 8.19.10 + IK 中文分词（本地构建） | 29200 | 搜索 |
+| Kibana | kibana:8.19.10 | 25601 | ES 可视化 |
+| Qdrant | qdrant:v1.16 | 26333 / 26334 | 向量库 |
+| Embedding | TEI (CPU) + bge-large-zh-v1.5 | 28085 | 文本向量化 |
 
 ### 应用入口
 
 - 启动命令：`uv run python main.py`（在 `D:\data-agent` 下执行）
-- API 文档：`http://127.0.0.1:8000/docs`
-- 查询接口：`POST http://127.0.0.1:8000/api/query`（SSE 流式，body：`{"query":"自然语言问题"}`）
+- API 文档：`http://127.0.0.1:8100/docs`
+- 查询接口：`POST http://127.0.0.1:8100/api/query`（SSE 流式，body：`{"query":"自然语言问题"}`）
 
 ---
 
@@ -113,8 +116,8 @@ uv run python main.py
 # 后台运行（适合长期驻留）
 uv run python main.py &
 
-# 若 8000 被占用，请改用 uvicorn 命令行显式指定端口
-# ⚠️ 千万不要改成 8001！8001 是「知库·查询服务」的端口，8002 是知库嵌入、8004 是知库导入，
+# 若 8100 被占用，请改用 uvicorn 命令行显式指定端口
+# ⚠️ 千万不要改成 8101！8101 是「知库·查询服务」的端口，8102 是知库嵌入、8104 是知库导入，
 #    改成这些端口会直接撞车 —— 这就是「一个端口能用了另一个就不行」的典型成因。
 uv run python -m uvicorn main:app --host 127.0.0.1 --port 18000
 ```
@@ -128,18 +131,18 @@ uv run python -m uvicorn main:app --host 127.0.0.1 --port 18000
 
 ```bash
 # Elasticsearch 集群健康
-curl --noproxy "*" http://localhost:9200/_cluster/health?pretty
+curl --noproxy "*" http://localhost:29200/_cluster/health?pretty
 
 # IK 中文分词测试
-curl --noproxy "*" -X POST "http://localhost:9200/_analyze" \
+curl --noproxy "*" -X POST "http://localhost:29200/_analyze" \
   -H "Content-Type: application/json" \
   -d '{"analyzer":"ik_smart","text":"查询上个月销售额最高的产品"}'
 
 # Qdrant 集合列表
-curl --noproxy "*" http://localhost:6333/collections
+curl --noproxy "*" http://localhost:26333/collections
 
 # Embedding 向量推理
-curl --noproxy "*" -X POST "http://localhost:8081/embed" \
+curl --noproxy "*" -X POST "http://localhost:28085/embed" \
   -H "Content-Type: application/json" \
   -d '{"inputs":"查询上个月销售额最高的产品"}'
 
@@ -151,7 +154,7 @@ docker exec mysql mysql -uitwwy -pitwwy123 -e "USE meta; SHOW TABLES; USE dw; SH
 ### 应用端到端测试
 
 ```bash
-curl --noproxy "*" -N -X POST http://127.0.0.1:8000/api/query \
+curl --noproxy "*" -N -X POST http://127.0.0.1:8100/api/query \
   -H "Content-Type: application/json" \
   -d '{"query":"查询上个月总销售额"}'
 ```
@@ -174,7 +177,7 @@ uv sync
 uv run python main.py
 
 # 3. 验证
-curl --noproxy "*" -N -X POST http://127.0.0.1:8000/api/query \
+curl --noproxy "*" -N -X POST http://127.0.0.1:8100/api/query \
   -H "Content-Type: application/json" \
   -d '{"query":"查询上个月总销售额"}'
 ```

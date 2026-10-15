@@ -4,11 +4,11 @@
 #   docker compose down         # 停止（保留数据卷）
 #   docker compose down -v      # 停止并删除数据卷（清空数据）
 #
-# 端口映射（与项目 .env / .env.example 默认值保持一致）：
-#   Milvus   19530   (standalone，存储向量)
-#   MinIO    9000 / 9001 (9001 为控制台)
-#   MongoDB  27017
-#   Attu     13000   (Milvus 可视化管理，可选)
+# 宿主端口映射（与项目 .env / .env.example 默认值保持一致；容器内侧仍为原端口）：
+#   Milvus   29530 → 19530   (standalone，存储向量)
+#   MinIO    29000 / 29001 → 9000 / 9001 (后者为控制台)
+#   MongoDB  27017 → 27017
+#   Attu     23000 → 3000    (Milvus 可视化管理，可选)
 #
 # 默认账号：MinIO  minioadmin / minioadmin
 # 自动创建的桶：knowledge-base（项目上传文件用，已在 create-buckets 中初始化）
@@ -41,8 +41,8 @@ services:
       - minio_data:/data
     command: minio server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "29000:9000"
+      - "29001:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -74,7 +74,7 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
     ports:
-      - "19530:19530"
+      - "29530:19530"
     depends_on:
       - etcd
       - minio
@@ -102,7 +102,7 @@ services:
     environment:
       MILVUS_URL: milvus:19530
     ports:
-      - "13000:3000"
+      - "23000:3000"
     depends_on:
       - milvus
 

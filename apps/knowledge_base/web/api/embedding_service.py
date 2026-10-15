@@ -2,7 +2,7 @@
 
 背景
 ----
-知库的导入服务(8004)与查询服务(8001)都要生成 dense+sparse 双向量，而
+知库的导入服务(8104)与查询服务(8101)都要生成 dense+sparse 双向量，而
 BGE-M3 单份常驻内存约 1.1~2.3GB。原实现让每个进程各自加载一份模型，
 在内存有限的机器上（例如 16GB 且同时跑着 Docker/IDE）必然 OOM：
 
@@ -88,4 +88,4 @@ def embed(request: EmbedRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app=app, host="127.0.0.1", port=8002)
+    uvicorn.run(app=app, host="127.0.0.1", port=8102)

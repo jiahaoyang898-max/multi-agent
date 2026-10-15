@@ -164,8 +164,8 @@
     const fileInput = document.getElementById('fileInput');
     const fileList = document.getElementById('fileList');
 
-    // 模拟后端API地址
-    const API_BASE = 'http://127.0.0.1:8000';
+    // 导入服务后端API地址（与托管本页面的 import_service 同端口 8104）
+    const API_BASE = 'http://127.0.0.1:8104';
 
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();

@@ -3,7 +3,7 @@
 
 覆盖：
   1. 六个服务的健康检查
-  2. 嵌入服务（BGE-M3，8002）双向量自检
+  2. 嵌入服务（BGE-M3，8102）双向量自检
   3. 问数（data-agent）自然语言问数，重点验证「相对时间查询不再匹配不到行」
   4. 知库（knowledge_base）型号确认 + 检索 + 生成
   5. 知库导入链路（可选，见 --with-import）
@@ -25,12 +25,12 @@ import uuid
 TIMEOUT = 300
 
 SERVICES = [
-    ("智枢工作台", 8080, "/"),
-    ("问数前端", 5173, "/"),
-    ("问数后端", 8000, "/docs"),
-    ("知库·嵌入服务", 8002, "/health"),
-    ("知库后端·查询", 8001, "/health"),
-    ("知库后端·导入", 8004, "/docs"),
+    ("智枢工作台", 8180, "/"),
+    ("问数前端", 8173, "/"),
+    ("问数后端", 8100, "/docs"),
+    ("知库·嵌入服务", 8102, "/health"),
+    ("知库后端·查询", 8101, "/health"),
+    ("知库后端·导入", 8104, "/docs"),
 ]
 
 # (用例名, 提问, 断言说明)
@@ -84,13 +84,13 @@ def health_checks():
 def run_embedding_service():
     """嵌入服务自检：验证 dense 维度与 sparse 词权重都正常返回。"""
     print("=" * 92)
-    print("二、知库·嵌入服务（BGE-M3 :8002）")
+    print("二、知库·嵌入服务（BGE-M3 :8102）")
     print("=" * 92)
     payload = {"texts": ["大功率电磁炉", "H3CLA2608室内无线网关"]}
     start = time.time()
     try:
         _, raw = http(
-            "http://127.0.0.1:8002/embed",
+            "http://127.0.0.1:8102/embed",
             data=payload,
             headers={"Content-Type": "application/json"},
             timeout=120,
@@ -153,7 +153,7 @@ def run_import(file_path):
     服务端按 file_title 先删后插，不会产生重复文档。
     """
     print("=" * 92)
-    print("五、知库导入链路（knowledge_base :8004）")
+    print("五、知库导入链路（knowledge_base :8104）")
     print("=" * 92)
     if not os.path.exists(file_path):
         print(f"  [FAIL] 文件不存在：{file_path}\n")
@@ -163,7 +163,7 @@ def run_import(file_path):
     start = time.time()
 
     try:
-        _, raw = http_multipart("http://127.0.0.1:8004/upload", file_path)
+        _, raw = http_multipart("http://127.0.0.1:8104/upload", file_path)
         task_ids = json.loads(raw).get("task_ids") or []
         if not task_ids:
             print(f"  [FAIL] 未返回 task_id：{raw[:100]}\n")
@@ -179,7 +179,7 @@ def run_import(file_path):
     while time.time() < deadline:
         time.sleep(15)
         try:
-            _, raw = http(f"http://127.0.0.1:8004/status/{task_id}", timeout=20)
+            _, raw = http(f"http://127.0.0.1:8104/status/{task_id}", timeout=20)
             info = json.loads(raw)
         except Exception as e:
             print(f"  [WARN] 状态查询失败，重试：{type(e).__name__}")
@@ -211,7 +211,7 @@ def run_data_agent():
         start = time.time()
         try:
             _, raw = http(
-                "http://127.0.0.1:8000/api/query",
+                "http://127.0.0.1:8100/api/query",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
@@ -259,7 +259,7 @@ def run_data_agent():
 
 def run_knowledge_base():
     print("=" * 92)
-    print("四、知库查询（knowledge_base :8001）")
+    print("四、知库查询（knowledge_base :8101）")
     print("=" * 92)
     passed = 0
     for name, question in KB_CASES:
@@ -267,7 +267,7 @@ def run_knowledge_base():
         start = time.time()
         try:
             _, raw = http(
-                "http://127.0.0.1:8001/query",
+                "http://127.0.0.1:8101/query",
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )

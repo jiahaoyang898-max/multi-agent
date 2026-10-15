@@ -14,7 +14,7 @@
         function connectSSE() {
             // ✅ 新增：URL带session_id参数
             const sessionId = document.getElementById("sessionIdInput").value;
-            const eventSource = new EventSource(`http://127.0.0.1:8001/stream/${sessionId}`);
+            const eventSource = new EventSource(`http://127.0.0.1:8101/stream/${sessionId}`);
             const resultDom = document.getElementById("result");
 
             // 监听SSE消息（实时接收）

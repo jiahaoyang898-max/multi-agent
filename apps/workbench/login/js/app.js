@@ -5,7 +5,7 @@
    · 口令以 PBKDF2-SHA256 + 每账号独立随机盐 派生后存储，不保存明文
    · 会话带签发时间与过期时间，勾选「记住我」写 localStorage（7 天），
      未勾选写 sessionStorage（关闭浏览器即失效，最长 12 小时）
-   · 不请求任何后端接口，也不新增端口 —— 页面由已有的 8080 静态服务托管
+   · 不请求任何后端接口，也不新增端口 —— 页面由已有的 8180 静态服务托管
 
    接真实后端时，只需替换 Store 段这几个函数：
      readUsers / writeUsers / findUser / saveUser / updatePassword
@@ -39,6 +39,91 @@
     C.iterations = ITER;
     if (window.console && console.info) {
         console.info('[智枢] 口令派生模式：' + C.mode + '，迭代 ' + ITER + ' 次');
+    }
+
+    /* =========================================================
+       跨源共享会话（:8180 的 /api/session，由 apps/workbench/server.js 提供）
+
+       为什么要：localStorage / sessionStorage 按 origin 隔离，问数前端 (:8173)
+       与独立登录页 (:8190) 读不到工作台 (:8180) 的会话，导致「工作台点了退出，
+       8173 照样能用」。登录/注册成功后把会话镜像一份到服务端，其它页面统一问它
+       「现在到底有没有人登录」。
+
+       ⚠️ 诚实边界：这是**前端体验级软守门**，不是安全机制——
+         · 任何人用 curl POST 一个会话就能伪造「已登录」；
+         · 账号与口令哈希仍在浏览器本地，可被手动改写。
+       它防的是「误点」「退出后页面还在」这类体验问题，防不住刻意绕过前端的人。
+       真正的安全边界必须做后端鉴权（服务端签发并校验 token）。
+
+       铁律：上报失败绝不阻塞登录/注册流程，一律吞掉，最多 console.warn。
+       ========================================================= */
+    var WORKBENCH_ORIGIN = 'http://127.0.0.1:8180';
+    var REPORT_TIMEOUT = 1500;
+
+    /* 独立登录页（8190 只托管本目录，没有 /api/session）跨源打到工作台；
+       同源 8180 下（页面路径 /login/）走同源根路径，不写死端口。 */
+    function isStandalone() {
+        try {
+            if (/^\/login(\/|$)/.test(String(location.pathname || ''))) return false;
+            var port = location.port;
+            if (!port || port === '8180') return false;
+        } catch (e) {
+        }
+        return true;
+    }
+
+    function sessionApiUrl() {
+        return (isStandalone() ? WORKBENCH_ORIGIN : location.origin) + '/api/session';
+    }
+
+    function withTimeout(promise, ms) {
+        return Promise.race([
+            promise,
+            new Promise(function (resolve) {
+                setTimeout(function () {
+                    resolve(false);
+                }, ms);
+            })
+        ]);
+    }
+
+    /* 登记会话：返回永不 reject 的 Promise，调用方爱等不等 */
+    function reportSession(s) {
+        try {
+            return withTimeout(fetch(sessionApiUrl(), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                cache: 'no-store',
+                body: JSON.stringify({
+                    email: s.email, name: s.name, token: s.token, expiresAt: s.expiresAt
+                })
+            }).then(function (res) {
+                if (!res.ok) console.warn('[智枢] 会话上报返回 ' + res.status + '（不影响登录）');
+                return res.ok;
+            }).catch(function (e) {
+                console.warn('[智枢] 会话上报失败（不影响登录）：' + ((e && e.message) || e));
+                return false;
+            }), REPORT_TIMEOUT);
+        } catch (e) {
+            console.warn('[智枢] 会话上报异常（不影响登录）：' + ((e && e.message) || e));
+            return Promise.resolve(false);
+        }
+    }
+
+    /* 清除会话：keepalive 让请求在页面跳走之后仍能送达 */
+    function dropSession() {
+        try {
+            var p = fetch(sessionApiUrl(), {
+                method: 'DELETE', cache: 'no-store', keepalive: true
+            });
+            if (p && p.catch) {
+                p.catch(function (e) {
+                    console.warn('[智枢] 会话清除失败（不影响退出）：' + ((e && e.message) || e));
+                });
+            }
+        } catch (e) {
+            console.warn('[智枢] 会话清除异常（不影响退出）：' + ((e && e.message) || e));
+        }
     }
 
     function $(s, r) {
@@ -149,6 +234,9 @@
         try {
             s = JSON.parse(raw);
         } catch (e) {
+            /* BUG-8：脏值也要清掉，与「过期 / 无 uid / 账号不存在」三条路径口径一致，
+               否则非法 JSON 会一直赖在 storage 里，每次刷新都走一遍解析失败 */
+            clearSession();
             return null;
         }
         if (!s || !s.uid || !s.expiresAt || s.expiresAt < Date.now()) {
@@ -246,8 +334,40 @@
             var i = f.querySelector('input');
             if (i) i.removeAttribute('aria-invalid');
         });
+        setAgreeErr('');
         var aw = $('#agreeWrap');
         if (aw) aw.classList.remove('invalid');
+    }
+
+    /**
+     * 「同意条款」未勾选的文字提示（BUG-7）。
+     * 原来只给 #agreeWrap 加 .invalid（边框/文字变红），既没有可读文字，
+     * 读屏用户也完全听不到出错——这里补上 .err 文字 + aria-invalid + aria-describedby。
+     * @param {string|{text:string, speak:boolean}} msg 传对象且 speak=true 时同时挂 aria-errormessage
+     */
+    function setAgreeErr(msg) {
+        var el = $('#agreeErr');
+        var input = $('#agree');
+        var text = typeof msg === 'string' ? msg : ((msg && msg.text) || '');
+        var speak = !!(msg && msg.speak);
+        if (el) {
+            el.textContent = text;
+            el.style.maxHeight = text ? 'none' : '0';
+            el.style.marginTop = text ? '7px' : '0';
+        }
+        if (input) {
+            if (text) {
+                input.setAttribute('aria-invalid', 'true');
+                input.setAttribute('aria-describedby', 'agreeErr');
+                if (speak) input.setAttribute('aria-errormessage', 'agreeErr');
+                else input.removeAttribute('aria-errormessage');
+            } else {
+                input.removeAttribute('aria-invalid');
+                input.removeAttribute('aria-describedby');
+                input.removeAttribute('aria-errormessage');
+            }
+        }
+        return !text;
     }
 
     /* ---------------- 按钮忙碌态 ---------------- */
@@ -325,16 +445,44 @@
         if (bar) bar.hidden = true;
     }
 
-    function enterWorkbench(user, form, persist) {
-        if (!startSession(user, persist)) {
+    /**
+     * 登录 / 注册成功后的收尾。
+     * kind='signup' 时说「注册成功」，别复用登录文案（BUG-6）。
+     * 独立模式（8190）下 '../' 会解析回 8190 自己 = 原地刷新，
+     * 所以不能谎称「正在进入工作台」，只报已登录并给出工作台地址（BUG-5）。
+     */
+    function enterWorkbench(user, form, persist, kind) {
+        var s = startSession(user, persist);
+        if (!s) {
             setAlert(form, '无法保存登录状态，请检查浏览器是否禁用了本地存储', 'error');
             return false;
         }
-        setAlert(form, '登录成功，正在进入工作台…', 'success');
-        toast('欢迎回来' + (user.name ? '，' + user.name : ''));
-        setTimeout(function () {
-            window.location.href = '../';
-        }, 900);
+        var standalone = isStandalone();
+        var isNew = kind === 'signup';
+        var who = user.name ? '，' + user.name : '';
+
+        if (standalone) {
+            setAlert(form, (isNew ? '注册成功' : '已登录') + '。工作台请打开 ' + WORKBENCH_ORIGIN, 'success');
+            toast((isNew ? '注册成功，欢迎加入' + who : '登录成功，工作台在 ' + WORKBENCH_ORIGIN));
+            showSessionBar(s);
+            /* 顶部提示条里的「进入工作台」在独立模式下同样是死链（指向 8190 自己），顺手接对 */
+            var sbGo = document.querySelector('.sb-go');
+            if (sbGo) sbGo.setAttribute('href', WORKBENCH_ORIGIN + '/');
+        } else {
+            setAlert(form, (isNew ? '注册成功' : '登录成功') + '，正在进入工作台…', 'success');
+            toast((isNew ? '欢迎加入' + who : '欢迎回来' + who));
+        }
+
+        /* 先将会话镜像到服务端（失败也不拦），落定后再跳，
+           避免跳转把在途的 POST 掐掉导致 8173 读不到登录态 */
+        var t0 = Date.now();
+        reportSession(s).then(function () {
+            if (standalone) return;     /* 独立模式不跳，留在本页显示提示条 */
+            var rest = Math.max(0, 900 - (Date.now() - t0));
+            setTimeout(function () {
+                window.location.href = '../';
+            }, rest);
+        });
         return true;
     }
 
@@ -413,6 +561,59 @@
         }
     });
 
+    /* ---------------- 演示账号一键填入 ---------------- */
+    var DEMO = {email: 'demo@zhishu.com', pass: 'Demo123456', name: '演示用户'};
+    var demoBtn = $('#demoBtn');
+    var busyDemo = false;
+
+    /* 口令写死在前端只为演示零门槛，真实账号仍走注册派生，不落明文 */
+    async function ensureDemoUser() {
+        var u = findUser(DEMO.email);
+        var salt = C.randomSalt(16);
+        var hash = await C.derive(DEMO.pass, salt, ITER, 32);
+        if (!u) {
+            saveUser({
+                id: C.randomHex(8), email: normalize(DEMO.email), name: DEMO.name,
+                salt: salt, hash: hash, iter: ITER, createdAt: Date.now()
+            });
+            return 'created';
+        }
+        if (await C.verify(DEMO.pass, u.salt, u.iter || ITER, u.hash)) return 'ok';
+        updatePassword(DEMO.email, salt, hash, ITER);
+        return 'reset';
+    }
+
+    if (demoBtn) {
+        demoBtn.addEventListener('click', async function () {
+            if (busyDemo || busy.login || busy.signup) return;
+            clearAlerts();
+            clearErrs();
+            if (state !== 'login') applyState('login');
+            busyDemo = true;
+            setBusy(demoBtn, true, '正在准备');
+            var how;
+            try {
+                how = await ensureDemoUser();
+            } catch (e) {
+                busyDemo = false;
+                setBusy(demoBtn, false);
+                setAlert(formLogin, '演示账号准备失败：' + ((e && e.message) || '无法完成口令派生'), 'error');
+                return;
+            }
+            loginEmail.value = DEMO.email;
+            loginPass.value = DEMO.pass;
+            loginEmail.dispatchEvent(new Event('input', {bubbles: true}));
+            loginPass.dispatchEvent(new Event('input', {bubbles: true}));
+            busyDemo = false;
+            setBusy(demoBtn, false);
+            setAlert(formLogin, how === 'created'
+                ? '已自动注册演示账号并填入，点「登录」即可进入工作台'
+                : '演示账号已填入，点「登录」即可进入工作台', 'success');
+            toast('演示账号已就绪');
+            loginBtn.focus();
+        });
+    }
+
     /* ---------------- 注册 ---------------- */
     var suName = $('#suName');
     var suEmail = $('#suEmail');
@@ -438,10 +639,12 @@
         var aw = $('#agreeWrap');
         var ok4 = true;
         if (agree && !agree.checked) {
-            aw.classList.add('invalid');
+            if (aw) aw.classList.add('invalid');
+            setAgreeErr({text: '请先阅读并勾选同意服务条款与隐私政策', speak: true});
             ok4 = false;
         } else if (aw) {
             aw.classList.remove('invalid');
+            setAgreeErr('');
         }
 
         if (!ok1 || !ok2 || !ok3 || !ok4) return;
@@ -486,8 +689,9 @@
             return;
         }
 
-        toast('注册成功，正在进入工作台…');
-        if (!enterWorkbench(rec, formSignup, true)) {
+        /* 文案（注册成功 / 欢迎加入）统一由 enterWorkbench(..., 'signup') 负责，
+           此处不再抢跑写一条登录口径的 toast */
+        if (!enterWorkbench(rec, formSignup, true, 'signup')) {
             busy.signup = false;
             setBusy(suBtn, false);
             return;
@@ -709,7 +913,10 @@
     if (agreeBox) {
         agreeBox.addEventListener('change', function () {
             var aw = $('#agreeWrap');
-            if (aw && agreeBox.checked) aw.classList.remove('invalid');
+            if (agreeBox.checked) {
+                if (aw) aw.classList.remove('invalid');
+                setAgreeErr('');
+            }
         });
     }
 
@@ -718,6 +925,7 @@
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function () {
             clearSession();
+            dropSession();      /* 服务端那份镜像也要一起清，否则 8173 仍认为有人登录 */
             hideSessionBar();
             loginPass.value = '';
             loginPass.closest('.field').classList.remove('has-value');

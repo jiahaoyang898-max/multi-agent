@@ -470,6 +470,11 @@
         <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         新对话
       </button>
+      <!-- 返回工作台：子页语义是「回首页」，**不清会话**（清会话只在首页的「退出登录」做） -->
+      <button class="btn-ghost" id="btnHome" type="button" title="返回智枢工作台（不清登录状态）">
+        <svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/></svg>
+        返回工作台
+      </button>
     </div>
 
     <div class="chat" id="chatEl">
@@ -517,13 +522,13 @@
 <script>
 /* =========================================================
    智枢知库 · 合并页（问答 + 导入）
-   后端零改动：问答 API(:8001) 与导入 API(:8004) 均为跨域直连，
+   后端零改动：问答 API(:8101) 与导入 API(:8104) 均为跨域直连，
    两个后端已开启 CORS(allow_origins=*)。
    ========================================================= */
 'use strict';
 
-const QUERY_BASE  = 'http://127.0.0.1:8001';
-const IMPORT_BASE = 'http://127.0.0.1:8004';
+const QUERY_BASE  = 'http://127.0.0.1:8101';
+const IMPORT_BASE = 'http://127.0.0.1:8104';
 
 /* ---------- 会话 ID（本地持久化） ---------- */
 let sessionId = localStorage.getItem('kb_session_id');
@@ -575,7 +580,7 @@ function normalizeRunningLog(t) {
 }
 
 /* =========================================================
-   一、知识问答（:8001）
+   一、知识问答（:8101）
    ========================================================= */
 const chatEl   = document.getElementById('chatEl');
 const inputEl  = document.getElementById('inputEl');
@@ -778,16 +783,50 @@ function finalizeBotAnswer(botMsgEl, answer, error, imageUrls) {
   scrollToBottom();
 }
 
+/* API 连通状态：null=还没探过 / true=已连接 / false=未连接
+   （BUG-9：徽标已经亮成「未连接」时，点发送不该再傻等约 2.1 秒的网络超时） */
+let apiConnected = null;
+
+function setPill(connected) {
+  apiConnected = connected;
+  apiPill.textContent = connected ? 'API 已连接' : 'API 未连接';
+  apiPill.classList.toggle('connected', !!connected);
+}
+
 async function apiHealth() {
   try {
     const res = await fetch(QUERY_BASE + '/health');
-    if (!res.ok) throw new Error();
-    apiPill.textContent = 'API 已连接';
-    apiPill.classList.add('connected');
+    setPill(!!res.ok);
   } catch (_) {
-    apiPill.textContent = 'API 未连接';
-    apiPill.classList.remove('connected');
+    setPill(false);
   }
+}
+
+/* 轻量探活：只问 /health，带超时，用来判断「徽标是不是过期了」 */
+async function probeQueryApi(timeoutMs) {
+  const ctrl = ('AbortController' in window) ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, timeoutMs || 1200);
+  try {
+    const res = await fetch(QUERY_BASE + '/health', {cache: 'no-store', signal: ctrl && ctrl.signal});
+    return !!(res && res.ok);
+  } catch (_) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* 在气泡里立刻落一条本地可读提示（不走网络、不假装有答案） */
+function localNotice(botMsgEl, text) {
+  const bubble = botMsgEl.children[1].querySelector('.bubble');
+  let el = bubble.querySelector('.answer');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'answer';
+    bubble.insertBefore(el, bubble.firstChild);
+  }
+  el.textContent = text;
+  return el;
 }
 
 async function loadHistory() {
@@ -833,6 +872,25 @@ async function onSend() {
   addUserMsg(text);
   const botMsgEl = addBotMsgSkeleton();
   sendBtn.disabled = true;
+
+  /* BUG-9：徽标已亮「API 未连接」时，别再走那条要等约 2.1 秒才有反馈的网络路径。
+     先本地落一条可读提示，同时做一次轻量探活（1.2 秒上限）：
+     后端其实已经起来了 → 抹掉提示正常发问；确实不通 → 立即收尾，问题留在输入框可重试。 */
+  if (apiConnected === false) {
+    localNotice(botMsgEl,
+      '知库问答服务 (:8101) 当前未连接，这条提问没有发出。' +
+      '请确认问答后端已启动；内容已保留在输入框，可直接重试。');
+    const alive = await probeQueryApi(1200);
+    setPill(alive);
+    if (!alive) {
+      const typing = botMsgEl.querySelector('.typing');
+      if (typing) typing.remove();
+      inputEl.value = text;
+      sendBtn.disabled = false;
+      return;
+    }
+    localNotice(botMsgEl, '').remove();   /* 探活成功，接着走正常流程 */
+  }
 
   try {
     const isStream = streamToggle.checked;
@@ -913,7 +971,7 @@ async function onSend() {
       const typing = botMsgEl.querySelector('.typing');
       if (typing) typing.remove();
       markProgressFinal(botMsgEl, true);
-      let errMsg = '无法连接知库问答服务 (:8001)，请确认后端已启动';
+      let errMsg = '无法连接知库问答服务 (:8101)，请确认后端已启动';
       try {
         if (e && e.data) { const d = JSON.parse(e.data); if (d.error) errMsg = d.error; }
       } catch (_) {}
@@ -937,7 +995,7 @@ async function onSend() {
       answerEl.className = 'answer';
       bubble.insertBefore(answerEl, bubble.firstChild);
     }
-    answerEl.textContent = '请求失败：' + friendlyErr(e, '知库问答服务 (:8001)');
+    answerEl.textContent = '请求失败：' + friendlyErr(e, '知库问答服务 (:8101)');
     sendBtn.disabled = false;
   }
 }
@@ -966,7 +1024,7 @@ document.getElementById('btnClear').addEventListener('click', async () => {
 });
 
 /* =========================================================
-   二、文档导入（:8004）
+   二、文档导入（:8104）
    ========================================================= */
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
@@ -975,11 +1033,32 @@ const navBadge = document.getElementById('navBadge');
 const taskCountEl = document.getElementById('taskCount');
 let activeTasks = 0;
 
-function updateTaskBadge(delta) {
-  activeTasks = Math.max(0, activeTasks + delta);
-  navBadge.textContent = String(activeTasks);
-  navBadge.classList.toggle('show', activeTasks > 0);
-  taskCountEl.textContent = document.querySelectorAll('.file-card').length + ' 个任务';
+/* 计数一律从 DOM 现算，不再靠 +1/-1 累加：
+   之前 navBadge 走累加、taskCount 走 DOM，两条口径会在失败时同屏打架（徽标 0、面板「2 个任务」） */
+function updateTaskBadge() {
+  const cards = fileListEl.querySelectorAll('.file-card');
+  let running = 0;
+  cards.forEach(function (c) {
+    const b = c.querySelector('.badge');
+    if (b && /上传中|处理中/.test(b.textContent)) running++;
+  });
+  activeTasks = running;
+  navBadge.textContent = String(running);
+  navBadge.classList.toggle('show', running > 0);
+  taskCountEl.textContent = cards.length + ' 个任务';
+}
+
+function showImportNotice(msg) {
+  const old = document.getElementById('importNotice');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'importNotice';
+  el.style.cssText = 'padding:10px 12px;margin:0 0 10px;border-radius:10px;font-size:13px;' +
+    'border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#b91c1c;cursor:pointer';
+  el.textContent = msg + '（点此关闭）';
+  el.addEventListener('click', () => el.remove());
+  fileListEl.insertBefore(el, fileListEl.firstChild);
+  setTimeout(() => { if (el.isConnected) el.remove(); }, 8000);
 }
 
 dropZone.addEventListener('click', () => fileInput.click());
@@ -1035,7 +1114,7 @@ async function uploadFile(file) {
     if (done.length + running.length === 0) logDetails.open = false;
   }
 
-  updateTaskBadge(+1);
+  updateTaskBadge();
 
   try {
     const formData = new FormData();
@@ -1061,26 +1140,44 @@ async function uploadFile(file) {
           badge.textContent = '已完成';
           badge.className = 'badge completed';
           bar.className = 'done';
-          updateTaskBadge(-1);
+          updateTaskBadge();
           clearInterval(interval);
         } else if (data.status === 'failed') {
           badge.textContent = '失败';
           badge.className = 'badge failed';
           bar.className = 'doing';
           bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
-          updateTaskBadge(-1);
+          updateTaskBadge();
           clearInterval(interval);
         }
       } catch (_) { /* 轮询错误不终止 */ }
     }, 2000);
 
   } catch (error) {
+    const msg = friendlyErr(error, '知库导入服务 (:8104)');
+    /* 服务不可达＝请求根本没发出去，不该留下一张「失败」任务卡误导成"处理失败了" */
+    if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test((error && error.message) || '')) {
+      card.remove();
+      updateTaskBadge();
+      showImportNotice('导入服务 (:8104) 未连接，文件未开始上传');
+      return;
+    }
     badge.textContent = '失败';
     badge.className = 'badge failed';
-    bar.className = 'doing';
+    bar.className = 'done';
+    bar.style.width = '100%';
     bar.style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
-    logList.innerHTML = '<li>' + escapeHtml(friendlyErr(error, '知库导入服务 (:8004)')) + '</li>';
-    updateTaskBadge(-1);
+    logSummary.textContent = '日志（失败原因）';
+    logList.innerHTML = '<li>' + escapeHtml(msg) + '</li>';
+    logDetails.open = true;
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.textContent = '移除';
+    rm.style.cssText = 'margin-top:6px;font-size:12px;padding:2px 10px;border-radius:6px;' +
+      'border:1px solid var(--line,#e5e7eb);background:transparent;cursor:pointer';
+    rm.addEventListener('click', function () { card.remove(); updateTaskBadge(); });
+    card.appendChild(rm);
+    updateTaskBadge();
   }
 }
 
@@ -1105,6 +1202,14 @@ document.getElementById('panelClose').addEventListener('click', () => {
   document.body.classList.add('panel-hidden');
   navChat.classList.add('active');
   navImport.classList.remove('active');
+});
+
+/* ---------- 返回工作台 ---------- */
+/* 佳总定的语义：子页 = 「返回」（只跳页，不清会话），首页 = 「登出」（才清会话）。
+   一律用 127.0.0.1 —— localhost 与 127.0.0.1 是两个 origin，混用会让
+   localStorage 里的账号库互不可见，误报「邮箱或密码不正确」。 */
+document.getElementById('btnHome').addEventListener('click', () => {
+  location.href = 'http://127.0.0.1:8180/';
 });
 
 window.addEventListener('beforeunload', closeCurrentStream);

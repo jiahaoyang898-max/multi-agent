@@ -244,6 +244,11 @@ function send(q, opts = {}) {
     signal: controller.signal,
   })
     .then(async (response) => {
+      /* 必须先判状态：后端不可达时 vite 代理会回一个 500 的 HTML 体，
+         不判 ok 就会被下面的 SSE 循环当成"没有 data: 行的流"读完，页面静默无反馈 */
+      if (!response.ok) {
+        throw new Error(`查询服务返回 HTTP ${response.status}，请确认问数后端（:8100）与中间件已启动`)
+      }
       if (!response.body) throw new Error('服务器未返回数据流')
       const reader = response.body.getReader()
       const decoder = new TextDecoder('utf-8')

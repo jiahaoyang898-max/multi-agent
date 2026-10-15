@@ -17,6 +17,12 @@
     </div>
 
     <div class="nav-right">
+      <span
+        v-if="authUnknown"
+        class="auth-warn"
+        :title="authWarnTitle"
+      >无法确认登录态</span>
+
       <div class="status" :title="connected ? '数据源已连接' : '数据源未连接'">
         <span v-for="s in sources" :key="s" class="status-item">
           <span class="dot" :class="{ on: connected }"></span>{{ s }}
@@ -24,6 +30,19 @@
       </div>
 
       <span class="kbd-hint num">⌘K</span>
+
+      <button
+        class="back-btn"
+        type="button"
+        title="返回智枢工作台（不清登录状态）"
+        @click="backToWorkbench"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 11 12 4l8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M6 10v9h12v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        返回工作台
+      </button>
 
       <button class="icon-btn" title="深色模式" aria-label="深色模式" @click="$emit('toggle-dark')">
         <svg v-if="!dark" width="17" height="17" viewBox="0 0 16 16">
@@ -48,10 +67,93 @@
 // 若以后后端提供 /health 等健康检查端点，可在此处轮询真实状态。
 // dark 状态由父组件（App）统一控制并响应 toggle-dark 事件。
 // 历史会话已改为左侧常驻栏（HistorySidebar），不再需要弹出按钮。
+import { onMounted, ref } from 'vue'
+
 defineProps({ dark: { type: Boolean, default: false } })
 defineEmits(['new-chat', 'toggle-dark'])
 const sources = ['MySQL', 'ES', 'Qdrant', 'Embed']
 const connected = true
+
+/* =========================================================
+   跨页退出与登录守门（问数前端 :8173）
+
+   为什么必须问服务端：本套登录体系是纯前端的，会话在 localStorage，
+   而 localStorage 按 origin 隔离——:8173 与 :8180 是两个站点，
+   在 :8173 里根本读不到 :8180 的登录状态。所以「到底有没有人登录」
+   统一问 :8180 的 GET /api/session（由 apps/workbench/server.js 提供）。
+
+   ⚠️ 诚实边界：这是**前端体验级软守门**，不是安全机制。
+     · 会话接口可以被 curl 直接 POST 伪造；
+     · 本页仍然只是一个前端，改一改就能绕过。
+   它防的是「在工作台点了退出，回头打开 8173 还以为登录着」，
+   防不住刻意绕过前端的人。真要安全必须做后端鉴权。
+
+   地址一律用 127.0.0.1，不混用 localhost —— 两者是不同 origin，
+   混用会让账号库互不可见，误报「邮箱或密码不正确」。
+   ========================================================= */
+const WORKBENCH_ORIGIN = 'http://127.0.0.1:8180'
+const SESSION_API = WORKBENCH_ORIGIN + '/api/session'
+const LOGIN_URL = WORKBENCH_ORIGIN + '/login/'
+const SESSION_PROBE_MS = 2500
+
+const authUnknown = ref(false)
+const authWarnTitle = ref('')
+
+function backToWorkbench() {
+  // 子页语义 = 「返回」，只跳页，不清会话（清会话只有工作台首页的「退出登录」做）
+  window.location.href = WORKBENCH_ORIGIN + '/'
+}
+
+/**
+ * 守门策略（本次拍板）：
+ *   ok:true                → 放行
+ *   ok:false（200 + JSON）  → 明确「没人在登录」→ 跳登录页（fail-closed）
+ *   其它（网络错误 / 超时 / 非 2xx / 404 / 返回不是这套接口）→ **fail-open**：
+ *     留在本页，只在顶栏提示「无法确认登录态」。
+ *   理由：跳过去的目标就是 :8180 —— 它挂了才导致「无法确认」，
+ *   此时 fail-closed 等于把一个能正常用的问数页换成一个白屏的登录页，
+ *   用户既看不到数据也看不到报错；而误报成本更高（工作台服务未重启时
+ *   接口还是 404，全部人都会被挡在门外）。明确读不到结论时宁可放行 + 提示。
+ */
+async function guardBySharedSession() {
+  const hasCtrl = typeof AbortController !== 'undefined'
+  const ctrl = hasCtrl ? new AbortController() : null
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort() }, SESSION_PROBE_MS)
+  let verdict = 'unknown'
+  let detail = ''
+  try {
+    const res = await fetch(SESSION_API, { cache: 'no-store', signal: hasCtrl ? ctrl.signal : undefined })
+    if (!res.ok) {
+      verdict = 'no-endpoint'
+      detail = `工作台会话接口返回 HTTP ${res.status}`
+    } else {
+      const data = await res.json()
+      if (data && data.ok === true) verdict = 'in'
+      else if (data && data.ok === false) verdict = 'out'
+      else { verdict = 'no-endpoint'; detail = '工作台会话接口返回了无法判读的内容' }
+    }
+  } catch (e) {
+    verdict = 'unreachable'
+    detail = '无法连接工作台会话服务 (:8180)'
+  } finally {
+    clearTimeout(timer)
+  }
+
+  if (verdict === 'out') {
+    // 明确没登录 → 走登录页；放在 try 里，跳转被拦截也不影响页面继续可用
+    try { window.location.replace(LOGIN_URL) } catch (e) { /* 忽略 */ }
+    return
+  }
+  if (verdict === 'in') {
+    authUnknown.value = false
+    authWarnTitle.value = ''
+    return
+  }
+  authUnknown.value = true
+  authWarnTitle.value = `${detail || '工作台未能给出登录结论'}；本页按「放行 + 提示」处理，未强制跳登录页`
+}
+
+onMounted(guardBySharedSession)
 </script>
 
 <style scoped>
@@ -139,6 +241,42 @@ const connected = true
 .icon-btn:hover {
   background: rgba(0, 0, 0, 0.05);
   color: var(--accent);
+}
+
+/* 返回工作台：沿用本页胶囊/描边语言（var(--border-strong) + var(--surface)），不新造视觉 */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.back-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* fail-open 时的诚实提示：用现成的次级文字色 + 描边，不抢眼但不隐瞒。
+   窄屏也不隐藏——这是「登录态没验成」的唯一信号，藏起来就等于骗人。 */
+.auth-warn {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  padding: 2px 9px;
+  cursor: help;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

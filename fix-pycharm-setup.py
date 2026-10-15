@@ -322,7 +322,7 @@ def main():
         log("完成。请在 PyCharm 中打开项目，确认：")
         log("  · Settings → Project → Python Interpreter 指向项目内 .venv")
         log("  · 项目树中 apps/data-agent、apps/knowledge_base 均无导入报红")
-        log("  · 运行下拉框可用：① 问数后端(8000) ② 嵌入(8002) ③ 查询(8001) ④ 导入(8004)")
+        log("  · 运行下拉框可用：① 问数后端(8100) ② 嵌入(8102) ③ 查询(8101) ④ 导入(8104)")
     else:
         log("请按顺序操作：")
         log("  1. 完全退出 PyCharm（任务管理器里确认没有 pycharm64.exe）")

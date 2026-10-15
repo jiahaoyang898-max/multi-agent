@@ -1,6 +1,6 @@
 {
   "_说明": "智枢套件服务清单。改这里即可增删服务，无需动 start-all.js。cwd 相对本目录；shell:true 用于 npm/cmd 命令。",
-  "openBrowser": "http://127.0.0.1:8080/login/",
+  "openBrowser": "http://127.0.0.1:8180/login/",
 
   "middleware": [
     {
@@ -26,7 +26,7 @@
       "color": "36",
       "cwd": "apps/workbench",
       "command": ["node", "server.js"],
-      "port": 8080,
+      "port": 8180,
       "openBrowser": true
     },
     {
@@ -38,8 +38,9 @@
         "node",
         "server.js"
       ],
-      "port": 8090,
+      "port": 8190,
       "env": {
+        "PORT": "8190",
         "NO_BROWSER": "1"
       }
     },
@@ -49,7 +50,7 @@
       "color": "34",
       "cwd": "apps/data-agent/web",
       "command": ["npm", "run", "dev"],
-      "port": 5173,
+      "port": 8173,
       "shell": true
     },
     {
@@ -57,16 +58,16 @@
       "title": "问数后端",
       "color": "34",
       "cwd": "apps/data-agent",
-      "command": ["uv", "run", "python", "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
-      "port": 8000
+      "command": ["uv", "run", "python", "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8100"],
+      "port": 8100
     },
     {
       "name": "kb-embedding",
       "title": "知库·嵌入服务 (BGE-M3)",
       "color": "32",
       "cwd": "apps/knowledge_base",
-      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.embedding_service:app", "--host", "127.0.0.1", "--port", "8002"],
-      "port": 8002,
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.embedding_service:app", "--host", "127.0.0.1", "--port", "8102"],
+      "port": 8102,
       "readyTimeoutMs": 300000,
       "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
     },
@@ -75,8 +76,8 @@
       "title": "知库后端·查询",
       "color": "32",
       "cwd": "apps/knowledge_base",
-      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.query_service:app", "--host", "127.0.0.1", "--port", "8001"],
-      "port": 8001,
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.query_service:app", "--host", "127.0.0.1", "--port", "8101"],
+      "port": 8101,
       "readyTimeoutMs": 600000,
       "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
     },
@@ -85,8 +86,8 @@
       "title": "知库后端·导入",
       "color": "32",
       "cwd": "apps/knowledge_base",
-      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.import_service:app", "--host", "127.0.0.1", "--port", "8004"],
-      "port": 8004,
+      "command": ["uv", "run", "python", "-m", "uvicorn", "web.api.import_service:app", "--host", "127.0.0.1", "--port", "8104"],
+      "port": 8104,
       "readyTimeoutMs": 300000,
       "optional": true,
       "env": { "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1" }
